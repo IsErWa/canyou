@@ -12,7 +12,7 @@ if %errorlevel% neq 0 (
 )
 REM 解析版本号：优先用环境变量 VER（CI 传入标签），否则取最近的 git 标签，都没有则 dev
 if not defined VER (
-    for /f "delims=" %%v in ('git describe --tags --abbrev=0 2^>nul') do set "VER=%%v"
+    for /f "delims=" %%v in ('git describe --tags "--abbrev=0" 2^>nul') do set "VER=%%v"
 )
 if not defined VER set "VER=dev"
 go build -trimpath -ldflags "-s -w -H=windowsgui -X main.Version=%VER%" -o Canyou-%VER%.exe .
