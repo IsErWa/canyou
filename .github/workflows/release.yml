@@ -1,0 +1,66 @@
+name: Release
+
+# 触发方式：推送形如 v1.0.0 的标签即自动构建并发布到 GitHub Releases
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Resolve version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"      # 例如 v1.2.3
+          $ver = $tag.TrimStart("v")           # 去掉前缀 v -> 1.2.3
+          "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=$tag"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Stamp version into versioninfo.json
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.version }}"
+          $p = $ver.Split(".")
+          $maj = [int]$p[0]
+          $min = if ($p.Length -gt 1) { [int]$p[1] } else { 0 }
+          $pat = if ($p.Length -gt 2) { [int]$p[2] } else { 0 }
+          $j = Get-Content versioninfo.json -Raw | ConvertFrom-Json
+          $j.FixedFileInfo.FileVersion    = [pscustomobject]@{ Major = $maj; Minor = $min; Patch = $pat; Build = 0 }
+          $j.FixedFileInfo.ProductVersion = [pscustomobject]@{ Major = $maj; Minor = $min; Patch = $pat; Build = 0 }
+          $j.StringFileInfo.FileVersion    = "$maj.$min.$pat.0"
+          $j.StringFileInfo.ProductVersion = "$maj.$min.$pat.0"
+          $j | ConvertTo-Json -Depth 10 | Set-Content versioninfo.json -Encoding utf8
+
+      - name: Install goversioninfo
+        shell: pwsh
+        run: |
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          "$(go env GOPATH)/bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Build (Canyou.exe)
+        env:
+          VER: ${{ steps.ver.outputs.tag }}   # 形如 v1.2.3，注入到标题栏与 EXE 版本
+        run: cmd /c build.bat
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Canyou ${{ steps.ver.outputs.tag }}
+          files: Canyou-${{ steps.ver.outputs.tag }}.exe
+          generate_release_notes: true

@@ -1,0 +1,30 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": { "Major": 1, "Minor": 0, "Patch": 0, "Build": 0 },
+    "ProductVersion": { "Major": 1, "Minor": 0, "Patch": 0, "Build": 0 },
+    "FileFlagsMask": "3f",
+    "FileFlags": "00",
+    "FileOS": "040004",
+    "FileType": "01",
+    "FileSubType": "00"
+  },
+  "StringFileInfo": {
+    "Comments": "Canyou",
+    "CompanyName": "ErWa",
+    "FileDescription": "Canyou",
+    "FileVersion": "1.0.0.0",
+    "InternalName": "Canyou.exe",
+    "LegalCopyright": "Copyright © 2026 ErWa",
+    "LegalTrademarks": "",
+    "OriginalFilename": "Canyou.exe",
+    "PrivateBuild": "",
+    "ProductName": "Canyou",
+    "ProductVersion": "1.0.0.0",
+    "SpecialBuild": ""
+  },
+  "VarFileInfo": {
+    "Translation": { "LangID": "0804", "CharsetID": "04B0" }
+  },
+  "IconPath": "favicon-128x128.ico",
+  "ManifestPath": ""
+}

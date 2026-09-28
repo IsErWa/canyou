@@ -1,0 +1,20 @@
+# 构建产物
+Canyou.exe
+*.exe
+resource.syso
+
+# 运行时生成的二维码临时图片等
+canyou_qrcode.png
+
+# Go 构建缓存
+/dist/
+/bin/
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+*.swp
+
+# 操作系统
+Thumbs.db
+Desktop.ini
