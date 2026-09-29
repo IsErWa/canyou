@@ -1,0 +1,9 @@
+# 统一换行：文本文件由 Git 规范为 LF 存储
+* text=auto
+
+# Shell 脚本必须保持 LF，否则在 Windows 检出后无法被 bash 执行
+*.sh text eol=lf
+
+# 构建脚本与批处理保持 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

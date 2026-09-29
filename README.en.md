@@ -4,7 +4,19 @@
 
 [简体中文](./README.md) · **English**
 
+📦 Repository: **<https://github.com/IsErWa/canyou>**
+
 ---
+
+## 📸 Screenshots
+
+**Server (desktop tool)** — set the directories, pick the local IP and port, and an access QR code is generated automatically:
+
+![Server](./img/server.png)
+
+**Client (web page)** — scan the QR code on a phone or any LAN device to browse, download, and upload:
+
+![Client](./img/client.png)
 
 ## ✨ Features
 
@@ -34,6 +46,13 @@
 > Changing the directory or port while running takes effect immediately; clearing the port or setting an invalid value stops the service automatically.
 
 ## 🔨 Building from source
+
+Get the source:
+
+```bash
+git clone https://github.com/IsErWa/canyou.git
+cd canyou
+```
 
 Prerequisites:
 

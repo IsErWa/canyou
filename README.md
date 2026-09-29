@@ -4,7 +4,19 @@
 
 **简体中文** · [English](./README.en.md)
 
+📦 仓库地址：**<https://github.com/IsErWa/canyou>**
+
 ---
+
+## 📸 界面预览
+
+**服务端（桌面工具）** — 设置目录、选择本机 IP 与端口，自动生成访问二维码：
+
+![服务端](./img/server.png)
+
+**客户端（浏览器网页）** — 手机 / 同网段设备扫码后即可浏览、下载、上传：
+
+![客户端](./img/client.png)
 
 ## ✨ 功能特性
 
@@ -34,6 +46,13 @@
 > 运行中修改目录或端口会即时生效；若把端口清空 / 改成非法值，服务会自动停止。
 
 ## 🔨 从源码构建
+
+获取源码：
+
+```bash
+git clone https://github.com/IsErWa/canyou.git
+cd canyou
+```
 
 前置依赖：
 

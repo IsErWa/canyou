@@ -6,6 +6,10 @@ resource.syso
 # 运行时生成的二维码临时图片等
 canyou_qrcode.png
 
+# 由 md2html.sh 生成的文档 HTML
+README.html
+README.en.html
+
 # Go 构建缓存
 /dist/
 /bin/
