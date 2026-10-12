@@ -7,7 +7,7 @@
 #
 set -euo pipefail
 
-TITLE="${TITLE:-Canyou-v1.0.0}"
+TITLE="${TITLE:-Canyou-v1.0.1}"
 
 # 检查依赖
 command -v marked >/dev/null 2>&1 || { echo "错误：未找到 marked，请先执行 npm install -g marked" >&2; exit 1; }

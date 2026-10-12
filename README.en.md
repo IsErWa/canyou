@@ -22,7 +22,9 @@
 
 - 📂 **Dual-directory setup**: configure a *view directory* (for browsing / downloading) and an *upload directory* (to receive web uploads) separately
 - 🖼️ **Instant QR access**: pick a local IP and port, and an access QR code is generated automatically — just scan to open
-- 🌐 **Modern responsive web UI**: adapts to dark / light mode, with drag-and-drop multi-file upload
+- ⬇️ **Flexible downloads**: download any single file, or tick multiple files / folders for a batch download that is streamed as a live zip on the fly (no temporary file)
+- 📤 **Floating upload panel**: a bottom-right upload dock with drag-and-drop / multi-select, per-file removal, pagination for many files, and a full-width layout on phones; results are shown inline with no page navigation
+- 🌐 **Modern responsive web UI**: adapts to dark / light mode, keeps the header and toolbar sticky while scrolling, and sorts the list by "folders first, then by modified time"
 - 🔗 **One-click actions**: copy the access URL, open in default browser (only enabled while the service is running and the address is valid)
 - ▶️ **Start / stop control**: a single button toggles sharing; the running state is shown live in gray / green
 - 💾 **Persistent config**: directories, port, and last-selected IP are saved to `%AppData%/Canyou/config.json`
@@ -95,7 +97,8 @@ go build -trimpath -ldflags "-s -w -H=windowsgui" -o Canyou.exe .
 .
 ├── main.go          # UI layout, interaction, start/stop and config logic
 ├── server.go        # net/http-based directory sharing service (start/stop/port errors)
-├── upload.go        # web directory listing and file-upload handling
+├── upload.go        # web directory listing, upload and download handling
+├── zip.go           # on-the-fly streaming zip packaging for batch / folder downloads
 ├── qrcode.go        # generate the access QR code as PNG
 ├── netinfo.go       # scan local LAN IPv4 addresses
 ├── config.go        # config persistence (%AppData%/Canyou/config.json)
@@ -109,6 +112,8 @@ go build -trimpath -ldflags "-s -w -H=windowsgui" -o Canyou.exe .
 ## ⚠️ Notes
 
 - This tool is for **LAN** file sharing and provides **no encryption or access control** — avoid sharing sensitive folders on untrusted networks.
+- Batch / folder downloads are packaged as a **live stream**: the zip is built and sent on the fly without using temporary disk space, so the save prompt may lag slightly and the browser won't show a total-size progress bar.
+- Files uploaded from the web page are saved to the separate *upload directory*, kept apart from the *view directory*.
 - If a port cannot be bound, it may be in use by another program or fall within a **system-reserved port range** (Windows / Hyper-V); just pick a different port.
 - The upload limit is 2 GB per request.
 

@@ -30,7 +30,7 @@ func applyWindowIcon(form *winc.Form) {
 	form.SetIcon(1, icon) // ICON_BIG：任务栏与 Alt+Tab
 }
 
-// newShareHandler 组装共享站点路由：内嵌 favicon、目录浏览页（含上传按钮）、上传接口，其余回退到静态文件服务
+// newShareHandler 组装共享站点路由：内嵌 favicon、目录浏览页（含上传与批量打包下载）、上传接口、zip 打包接口，其余回退到静态文件服务
 func newShareHandler(viewDir, uploadDir string) http.Handler {
 	fileServer := http.FileServer(http.Dir(viewDir))
 
@@ -42,6 +42,8 @@ func newShareHandler(viewDir, uploadDir string) http.Handler {
 			writer.Write(appIconBytes)
 		case request.URL.Path == "/upload":
 			handleFileUpload(writer, request, uploadDir)
+		case request.URL.Path == "/zip":
+			handleZipDownload(writer, request, viewDir)
 		case isDirectoryPath(viewDir, request.URL.Path):
 			serveDirectoryListing(writer, request, viewDir, uploadDir)
 		default:
