@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"unsafe"
 
 	"github.com/tadvi/winc"
 	"github.com/tadvi/winc/w32"
@@ -104,6 +105,8 @@ func main() {
 	winc.DefaultFont = winc.NewFont("Microsoft YaHei UI", 9, 0)
 
 	mainWindow := winc.NewForm(nil)
+	// 补上 WS_CLIPCHILDREN，避免父窗口擦背景时覆盖子控件（容器窗口的标准做法）
+	addWindowStyle(mainWindow.Handle(), w32.WS_CLIPCHILDREN)
 	mainWindow.SetText(textWindowTitle + " " + Version)
 	// SetSize 设置的是含标题栏/边框的窗口外框尺寸（本机非客户区约占 39px），
 	// 430 使客户区高约 391，完整容纳底边在 y=382 的访问地址分组框并留余量
@@ -119,10 +122,61 @@ func main() {
 	controller.loadIPAddresses()
 
 	mainWindow.OnClose().Bind(controller.onWindowClose)
-	mainWindow.Center()
+	centerOnCursorMonitor(mainWindow)
 	mainWindow.Show()
+	// Show 后强制重绘一次整块客户区，规避首帧未完全绘制的情况
+	repaintWindow(mainWindow.Handle())
 
 	winc.RunMainLoop()
+}
+
+// addWindowStyle 为窗口追加一个样式位（如 WS_CLIPCHILDREN、WS_CLIPSIBLINGS）
+func addWindowStyle(hwnd w32.HWND, style uint32) {
+	current := uint32(w32.GetWindowLong(hwnd, w32.GWL_STYLE))
+	if current&style == 0 {
+		w32.SetWindowLong(hwnd, w32.GWL_STYLE, current|style)
+	}
+}
+
+// repaintWindow 强制窗口立即重绘整块客户区
+func repaintWindow(hwnd w32.HWND) {
+	w32.InvalidateRect(hwnd, nil, true)
+	w32.UpdateWindow(hwnd)
+}
+
+// setBounds 以“父窗口客户区坐标”设置控件位置与大小。
+// 不用 winc 的 SetPos/SetSize：它们会把显示器工作区原点(workRect.Left/Top)错误叠加进坐标，
+// 在多显示器或工作区原点非(0,0)时把控件整体平移出窗体，导致客户区空白（整片灰）。
+func setBounds(ctrl winc.Controller, x, y, width, height int) {
+	w32.SetWindowPos(ctrl.Handle(), 0, x, y, width, height, w32.SWP_NOZORDER|w32.SWP_NOACTIVATE)
+}
+
+// centerOnCursorMonitor 将窗口居中到“鼠标指针所在显示器”的工作区。
+// 不用 winc 的 Form.Center()：它按窗口创建时的默认位置取最近显示器，
+// 在多显示器下会时主屏时副屏。改为跟随鼠标，符合用户当下关注的那块屏。
+func centerOnCursorMonitor(form *winc.Form) {
+	hwnd := form.Handle()
+	var monitor w32.HMONITOR
+	if x, y, ok := w32.GetCursorPos(); ok {
+		monitor = w32.MonitorFromPoint(x, y, w32.MONITOR_DEFAULTTONEAREST)
+	} else {
+		monitor = w32.MonitorFromWindow(hwnd, w32.MONITOR_DEFAULTTONEAREST)
+	}
+
+	var info w32.MONITORINFO
+	info.CbSize = uint32(unsafe.Sizeof(info))
+	if !w32.GetMonitorInfo(monitor, &info) {
+		form.Center()
+		return
+	}
+
+	rect := w32.GetWindowRect(hwnd)
+	winWidth := int(rect.Right - rect.Left)
+	winHeight := int(rect.Bottom - rect.Top)
+	work := info.RcWork
+	x := int(work.Left) + (int(work.Right-work.Left)-winWidth)/2
+	y := int(work.Top) + (int(work.Bottom-work.Top)-winHeight)/2
+	w32.SetWindowPos(hwnd, 0, x, y, 0, 0, w32.SWP_NOSIZE|w32.SWP_NOZORDER|w32.SWP_NOACTIVATE)
 }
 
 // NewUIController 创建界面控制器
@@ -150,9 +204,10 @@ func (controller *UIController) buildLayout() {
 // newGroup 创建一个带标题的分组框，作为设置面板的一个区块
 func (controller *UIController) newGroup(title string, x, y, width, height int) {
 	group := winc.NewGroupBox(controller.mainWindow)
+	// 分组框重绘时不裁剪同层级控件会盖住子控件，补 WS_CLIPSIBLINGS
+	addWindowStyle(group.Handle(), w32.WS_CLIPSIBLINGS)
 	group.SetText(title)
-	group.SetPos(x, y)
-	group.SetSize(width, height)
+	setBounds(group, x, y, width, height)
 	group.SetFont(controller.boldFont)
 }
 
@@ -163,13 +218,11 @@ func (controller *UIController) buildDirectoryRow() {
 	controller.dirEdit = winc.NewEdit(controller.mainWindow)
 	controller.dirEdit.SetText(hintNoDir)
 	controller.dirEdit.SetReadOnly(true)
-	controller.dirEdit.SetPos(78, 32)
-	controller.dirEdit.SetSize(222, 22)
+	setBounds(controller.dirEdit, 78, 32, 222, 22)
 
 	browseButton := winc.NewPushButton(controller.mainWindow)
 	browseButton.SetText(buttonChooseDir)
-	browseButton.SetPos(305, 28)
-	browseButton.SetSize(65, 28)
+	setBounds(browseButton, 305, 28, 65, 28)
 	browseButton.OnClick().Bind(controller.onChooseDirectory)
 }
 
@@ -180,13 +233,11 @@ func (controller *UIController) buildUploadRow() {
 	controller.uploadEdit = winc.NewEdit(controller.mainWindow)
 	controller.uploadEdit.SetText(hintNoDir)
 	controller.uploadEdit.SetReadOnly(true)
-	controller.uploadEdit.SetPos(78, 58)
-	controller.uploadEdit.SetSize(222, 22)
+	setBounds(controller.uploadEdit, 78, 58, 222, 22)
 
 	browseButton := winc.NewPushButton(controller.mainWindow)
 	browseButton.SetText(buttonChooseDir)
-	browseButton.SetPos(305, 54)
-	browseButton.SetSize(65, 28)
+	setBounds(browseButton, 305, 54, 65, 28)
 	browseButton.OnClick().Bind(controller.onChooseUploadDir)
 }
 
@@ -195,16 +246,14 @@ func (controller *UIController) buildIPPortRow() {
 	controller.newFieldLabel(labelLocalIP, 16, 86, 58)
 
 	controller.ipComboBox = winc.NewComboBox(controller.mainWindow)
-	controller.ipComboBox.SetPos(78, 84)
-	controller.ipComboBox.SetSize(102, 200)
+	setBounds(controller.ipComboBox, 78, 84, 102, 200)
 	controller.ipComboBox.OnSelectedChange().Bind(controller.onIPChanged)
 
 	controller.newFieldLabel(labelPort, 186, 86, 32)
 
 	controller.portEdit = newNumericEdit(controller.mainWindow)
 	controller.portEdit.SetText(controller.config.Port)
-	controller.portEdit.SetPos(220, 84)
-	controller.portEdit.SetSize(54, 22)
+	setBounds(controller.portEdit, 220, 84, 54, 22)
 	controller.portEdit.OnChange().Bind(controller.onPortChanged)
 
 	controller.newFieldLabel(textPortRangeHint, 280, 88, 90)
@@ -215,43 +264,36 @@ func (controller *UIController) buildIPPortRow() {
 func (controller *UIController) buildQRArea() {
 	controller.urlLabel = winc.NewLabel(controller.mainWindow)
 	controller.urlLabel.SetText(hintQRPlaceholder)
-	controller.urlLabel.SetPos(16, 152)
-	controller.urlLabel.SetSize(270, 20)
+	setBounds(controller.urlLabel, 16, 152, 270, 20)
 
 	controller.copyButton = winc.NewPushButton(controller.mainWindow)
 	controller.copyButton.SetText(buttonCopyURL)
-	controller.copyButton.SetPos(280, 189)
-	controller.copyButton.SetSize(76, 25)
+	setBounds(controller.copyButton, 280, 189, 76, 25)
 	controller.copyButton.SetEnabled(false)
 	controller.copyButton.OnClick().Bind(controller.onCopyAddress)
 
 	controller.openButton = winc.NewPushButton(controller.mainWindow)
 	controller.openButton.SetText(buttonOpen)
-	controller.openButton.SetPos(280, 239)
-	controller.openButton.SetSize(76, 25)
+	setBounds(controller.openButton, 280, 239, 76, 25)
 	controller.openButton.SetEnabled(false)
 	controller.openButton.OnClick().Bind(controller.onOpenAddress)
 
 	controller.qrImageView = winc.NewImageView(controller.mainWindow)
-	controller.qrImageView.SetPos(25, 176)
-	controller.qrImageView.SetSize(qrImagePixelSize, qrImagePixelSize)
+	setBounds(controller.qrImageView, 25, 176, qrImagePixelSize, qrImagePixelSize)
 	controller.qrImageView.Hide()
 
 	controller.qrHintLabel = winc.NewLabel(controller.mainWindow)
 	controller.qrHintLabel.SetText(textQRWaiting)
-	controller.qrHintLabel.SetPos(25, 266)
-	controller.qrHintLabel.SetSize(200, 20)
+	setBounds(controller.qrHintLabel, 25, 266, 200, 20)
 
 	controller.statusLabel = newStatusLabelView(controller.mainWindow)
-	controller.statusLabel.SetPos(294, 291)
-	controller.statusLabel.SetSize(76, 20)
+	setBounds(controller.statusLabel, 294, 291, 76, 20)
 	controller.statusLabel.SetFont(controller.boldFont)
 	controller.statusLabel.setStatus(statusIdle, statusColorIdle)
 
 	controller.shareButton = winc.NewPushButton(controller.mainWindow)
 	controller.shareButton.SetText(buttonStart)
-	controller.shareButton.SetPos(280, 337)
-	controller.shareButton.SetSize(76, 28)
+	setBounds(controller.shareButton, 280, 337, 76, 28)
 	controller.shareButton.OnClick().Bind(controller.onToggleService)
 }
 
@@ -259,8 +301,7 @@ func (controller *UIController) buildQRArea() {
 func (controller *UIController) newFieldLabel(text string, x, y, width int) *winc.Label {
 	label := winc.NewLabel(controller.mainWindow)
 	label.SetText(text)
-	label.SetPos(x, y)
-	label.SetSize(width, 20)
+	setBounds(label, x, y, width, 20)
 	return label
 }
 
