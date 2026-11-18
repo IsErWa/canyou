@@ -34,20 +34,28 @@ const (
 	labelUploadDir    = "上传目录"
 	labelLocalIP      = "本机IP"
 	labelPort         = "端口"
-	textPortRangeHint = "范围 1 - 65535"
+	labelGatePass     = "访问密码"
+	textPortRangeHint = "范围 1-65535"
+	textAdapterPrefix = "网卡 "
+	hintPassOff       = "未设置"
+	hintPassOn        = "已启用"
 
 	// 按钮文字
 	buttonChooseDir = "选择目录"
+	buttonRefreshIP = "刷新"
 	buttonStart     = "启动服务"
 	buttonStop      = "停止服务"
 	buttonCopyURL   = "复制地址"
+	buttonCopyPass  = "复制"
 	buttonOpen      = "浏览器打开"
+	buttonApplyPass = "设置密码"
 
 	// 状态与访问地址展示
 	statusIdle        = "● 未运行"
 	statusRunning     = "● 运行中"
 	textURLPrefix     = "浏览器打开："
 	hintNoDir         = "尚未选择目录"
+	hintNoIP          = "未找到局域网IP，连接网络后点击刷新"
 	hintQRPlaceholder = "选择IP并输入合法端口后自动生成二维码"
 	textQRWaiting     = "等待生成二维码…"
 
@@ -55,7 +63,9 @@ const (
 	dialogChooseDirTitle  = "选择查看目录"
 	dialogChooseUploadDir = "选择上传目录"
 	msgPromptTitle        = "提示"
+	msgPortInvalidTitle   = "端口无效"
 	msgNeedDir            = "请先选择查看目录"
+	msgNeedPassCopy       = "请先在密码框输入要复制的密码"
 	msgCopiedTitle        = "已复制"
 
 	// 错误提示模板（%s / %q 为运行时填充的错误详情）
@@ -73,24 +83,27 @@ type UIController struct {
 	fileServer  *FileServer
 	selectedDir string
 	uploadDir   string
-	lanIPs      []string
+	lanIPs      []LANIP
 	config      AppConfig
 
-	boldFont       *winc.Font
-	dirEdit        *winc.Edit
-	uploadEdit     *winc.Edit
-	ipComboBox     *winc.ComboBox
-	portEdit       *numericEdit
-	shareButton    *winc.PushButton
-	copyButton     *winc.PushButton
-	openButton     *winc.PushButton
-	statusLabel    *statusLabelView
-	urlLabel       *winc.Label
-	qrImageView    *winc.ImageView
-	qrHintLabel    *winc.Label
-	currentURL     string
-	qrTempFile     string
-	fixingPortText bool
+	boldFont        *winc.Font
+	dirEdit         *winc.Edit
+	uploadEdit      *winc.Edit
+	ipComboBox      *ipComboBox
+	refreshIPButton *winc.PushButton
+	portEdit        *numericEdit
+	shareButton     *winc.PushButton
+	copyButton      *winc.PushButton
+	openButton      *winc.PushButton
+	gatePassEdit    *winc.Edit
+	gateHint        *winc.Label
+	statusLabel     *statusLabelView
+	urlLabel        *winc.Label
+	qrImageView     *winc.ImageView
+	qrHintLabel     *winc.Label
+	currentURL      string
+	qrTempFile      string
+	fixingPortText  bool
 }
 
 // logServiceFailure 记录服务协程的意外运行期错误（启动后极少发生）
@@ -107,10 +120,12 @@ func main() {
 	mainWindow := winc.NewForm(nil)
 	// 补上 WS_CLIPCHILDREN，避免父窗口擦背景时覆盖子控件（容器窗口的标准做法）
 	addWindowStyle(mainWindow.Handle(), w32.WS_CLIPCHILDREN)
+	// 固定客户区底色并让标签透明，避免首帧未擦背景时 STATIC 标签露出灰块
+	installFormBackdrop(mainWindow)
 	mainWindow.SetText(textWindowTitle + " " + Version)
 	// SetSize 设置的是含标题栏/边框的窗口外框尺寸（本机非客户区约占 39px），
-	// 430 使客户区高约 391，完整容纳底边在 y=382 的访问地址分组框并留余量
-	mainWindow.SetSize(400, 430)
+	// 454 使客户区高约 415，完整容纳底边在 y=406 的访问地址分组框并留余量
+	mainWindow.SetSize(400, 454)
 	applyWindowIcon(mainWindow)
 	// 固定窗口尺寸：禁用右下角拖拽缩放边框与最大化按钮
 	mainWindow.EnableSizable(false)
@@ -192,12 +207,13 @@ func NewUIController(mainWindow *winc.Form) *UIController {
 
 // buildLayout 以分组设置面板形式组装界面
 func (controller *UIController) buildLayout() {
-	controller.newGroup(textGroupShare, 8, 8, 372, 112)
+	controller.newGroup(textGroupShare, 8, 8, 372, 136)
 	controller.buildDirectoryRow()
 	controller.buildUploadRow()
 	controller.buildIPPortRow()
+	controller.buildGateRow()
 
-	controller.newGroup(textGroupQR, 8, 128, 372, 254)
+	controller.newGroup(textGroupQR, 8, 152, 372, 254)
 	controller.buildQRArea()
 }
 
@@ -206,6 +222,8 @@ func (controller *UIController) newGroup(title string, x, y, width, height int) 
 	group := winc.NewGroupBox(controller.mainWindow)
 	// 分组框重绘时不裁剪同层级控件会盖住子控件，补 WS_CLIPSIBLINGS
 	addWindowStyle(group.Handle(), w32.WS_CLIPSIBLINGS)
+	// 分组框默认按按钮面色擦背景，与窗体底色不一致，统一接管其背景擦除
+	installGroupBackdrop(group)
 	group.SetText(title)
 	setBounds(group, x, y, width, height)
 	group.SetFont(controller.boldFont)
@@ -213,87 +231,122 @@ func (controller *UIController) newGroup(title string, x, y, width, height int) 
 
 // buildDirectoryRow 构建目录选择行：标签、只读路径输入框、浏览按钮
 func (controller *UIController) buildDirectoryRow() {
-	controller.newFieldLabel(labelDirectory, 16, 34, 58)
+	controller.newFieldLabel(labelDirectory, 12, 34, 48)
 
 	controller.dirEdit = winc.NewEdit(controller.mainWindow)
 	controller.dirEdit.SetText(hintNoDir)
 	controller.dirEdit.SetReadOnly(true)
-	setBounds(controller.dirEdit, 78, 32, 222, 22)
+	setBounds(controller.dirEdit, 64, 32, 245, 22)
 
 	browseButton := winc.NewPushButton(controller.mainWindow)
 	browseButton.SetText(buttonChooseDir)
-	setBounds(browseButton, 305, 28, 65, 28)
+	setBounds(browseButton, 310, 30, 65, 24)
 	browseButton.OnClick().Bind(controller.onChooseDirectory)
 }
 
 // buildUploadRow 构建上传目录选择行，结构与查看目录行一致
 func (controller *UIController) buildUploadRow() {
-	controller.newFieldLabel(labelUploadDir, 16, 60, 58)
+	controller.newFieldLabel(labelUploadDir, 12, 60, 48)
 
 	controller.uploadEdit = winc.NewEdit(controller.mainWindow)
 	controller.uploadEdit.SetText(hintNoDir)
 	controller.uploadEdit.SetReadOnly(true)
-	setBounds(controller.uploadEdit, 78, 58, 222, 22)
+	setBounds(controller.uploadEdit, 64, 58, 245, 22)
 
 	browseButton := winc.NewPushButton(controller.mainWindow)
 	browseButton.SetText(buttonChooseDir)
-	setBounds(browseButton, 305, 54, 65, 28)
+	setBounds(browseButton, 310, 56, 65, 24)
 	browseButton.OnClick().Bind(controller.onChooseUploadDir)
 }
 
 // buildIPPortRow 将本机IP下拉选择与端口输入（含范围提示）合并到同一行
 func (controller *UIController) buildIPPortRow() {
-	controller.newFieldLabel(labelLocalIP, 16, 86, 58)
+	controller.newFieldLabel(labelLocalIP, 12, 86, 48)
 
-	controller.ipComboBox = winc.NewComboBox(controller.mainWindow)
-	setBounds(controller.ipComboBox, 78, 84, 102, 200)
+	// 下拉框 102px 宽装不下"IP (网卡名)"，自建控件在创建窗口时就带自绘样式，
+	// 展开时画两行：第一行 IP、第二行网卡名，收起后仍只显示 IP
+	controller.ipComboBox = newIPComboBox(controller.mainWindow, func(index int) (string, string) {
+		if index < 0 || index >= len(controller.lanIPs) {
+			return "", ""
+		}
+		return controller.lanIPs[index].IP, controller.lanIPs[index].Adapter
+	})
+	setBounds(controller.ipComboBox, 64, 84, 102, 500)
 	controller.ipComboBox.OnSelectedChange().Bind(controller.onIPChanged)
 
-	controller.newFieldLabel(labelPort, 186, 86, 32)
+	controller.refreshIPButton = winc.NewPushButton(controller.mainWindow)
+	controller.refreshIPButton.SetText(buttonRefreshIP)
+	setBounds(controller.refreshIPButton, 168, 83, 38, 24)
+	controller.refreshIPButton.OnClick().Bind(controller.onRefreshIPAddresses)
+
+	controller.newFieldLabel(labelPort, 212, 86, 24)
 
 	controller.portEdit = newNumericEdit(controller.mainWindow)
 	controller.portEdit.SetText(controller.config.Port)
-	setBounds(controller.portEdit, 220, 84, 54, 22)
+	setBounds(controller.portEdit, 240, 84, 48, 22)
 	controller.portEdit.OnChange().Bind(controller.onPortChanged)
 
-	controller.newFieldLabel(textPortRangeHint, 280, 88, 90)
+	controller.newFieldLabel(textPortRangeHint, 292, 86, 80)
+}
+
+// buildGateRow 构建访问密码行：标签、明文输入框、生效状态提示、复制与应用按钮；
+// 留空并应用即取消密码，已授权设备名单保留
+func (controller *UIController) buildGateRow() {
+	controller.newFieldLabel(labelGatePass, 12, 112, 48)
+
+	controller.gatePassEdit = winc.NewEdit(controller.mainWindow)
+	setBounds(controller.gatePassEdit, 64, 110, 148, 22)
+
+	controller.gateHint = winc.NewLabel(controller.mainWindow)
+	setBounds(controller.gateHint, 216, 112, 42, 20)
+
+	copyButton := winc.NewPushButton(controller.mainWindow)
+	copyButton.SetText(buttonCopyPass)
+	setBounds(copyButton, 262, 108, 32, 24)
+	copyButton.OnClick().Bind(controller.onCopyGatePassword)
+
+	applyButton := winc.NewPushButton(controller.mainWindow)
+	applyButton.SetText(buttonApplyPass)
+	setBounds(applyButton, 310, 108, 65, 24)
+	applyButton.OnClick().Bind(controller.onApplyGatePassword)
 }
 
 // buildQRArea 构建二维码展示区：左侧为访问地址与二维码图像（含占位提示），
-// 右侧竖排复制/打开按钮、运行状态与共享启停按钮
+// 右侧竖排复制/打开按钮、运行状态与共享启停按钮；
+// 控件均为窗体绝对坐标，分组框因新增访问密码行下移 24px，组内控件必须同步下移
 func (controller *UIController) buildQRArea() {
 	controller.urlLabel = winc.NewLabel(controller.mainWindow)
 	controller.urlLabel.SetText(hintQRPlaceholder)
-	setBounds(controller.urlLabel, 16, 152, 270, 20)
+	setBounds(controller.urlLabel, 16, 176, 270, 20)
 
 	controller.copyButton = winc.NewPushButton(controller.mainWindow)
 	controller.copyButton.SetText(buttonCopyURL)
-	setBounds(controller.copyButton, 280, 189, 76, 25)
+	setBounds(controller.copyButton, 280, 213, 76, 25)
 	controller.copyButton.SetEnabled(false)
 	controller.copyButton.OnClick().Bind(controller.onCopyAddress)
 
 	controller.openButton = winc.NewPushButton(controller.mainWindow)
 	controller.openButton.SetText(buttonOpen)
-	setBounds(controller.openButton, 280, 239, 76, 25)
+	setBounds(controller.openButton, 280, 263, 76, 25)
 	controller.openButton.SetEnabled(false)
 	controller.openButton.OnClick().Bind(controller.onOpenAddress)
 
 	controller.qrImageView = winc.NewImageView(controller.mainWindow)
-	setBounds(controller.qrImageView, 25, 176, qrImagePixelSize, qrImagePixelSize)
+	setBounds(controller.qrImageView, 25, 200, qrImagePixelSize, qrImagePixelSize)
 	controller.qrImageView.Hide()
 
 	controller.qrHintLabel = winc.NewLabel(controller.mainWindow)
 	controller.qrHintLabel.SetText(textQRWaiting)
-	setBounds(controller.qrHintLabel, 25, 266, 200, 20)
+	setBounds(controller.qrHintLabel, 25, 290, 200, 20)
 
 	controller.statusLabel = newStatusLabelView(controller.mainWindow)
-	setBounds(controller.statusLabel, 294, 291, 76, 20)
+	setBounds(controller.statusLabel, 294, 339, 76, 18)
 	controller.statusLabel.SetFont(controller.boldFont)
 	controller.statusLabel.setStatus(statusIdle, statusColorIdle)
 
 	controller.shareButton = winc.NewPushButton(controller.mainWindow)
 	controller.shareButton.SetText(buttonStart)
-	setBounds(controller.shareButton, 280, 337, 76, 28)
+	setBounds(controller.shareButton, 280, 361, 76, 28)
 	controller.shareButton.OnClick().Bind(controller.onToggleService)
 }
 
@@ -333,6 +386,15 @@ func (controller *UIController) onChooseUploadDir(*winc.Event) {
 func (controller *UIController) onIPChanged(*winc.Event) {
 	controller.refreshQRCode()
 	controller.saveConfig()
+}
+
+// onRefreshIPAddresses 仅重新扫描地址及更新二维码，不重启共享或消息服务。
+func (controller *UIController) onRefreshIPAddresses(*winc.Event) {
+	controller.refreshIPButton.SetEnabled(false)
+	defer controller.refreshIPButton.SetEnabled(true)
+	if controller.loadIPAddresses() {
+		controller.saveConfig()
+	}
 }
 
 // onPortChanged 端口每次输入变化：刷新二维码与按钮，并即时校验端口（未启动与运行中都提示非法）；
@@ -379,10 +441,45 @@ func (controller *UIController) onToggleService(*winc.Event) {
 func (controller *UIController) validatePortInput() (int, bool) {
 	port, err := parseLegalPort(controller.portEdit.Text())
 	if err != nil {
-		winc.Errorf(controller.mainWindow, "%s", err)
+		winc.MsgBox(controller.mainWindow, msgPortInvalidTitle, err.Error(), w32.MB_ICONWARNING|w32.MB_OK)
 		return 0, false
 	}
 	return port, true
+}
+
+// onApplyGatePassword 把输入框明文哈希后热更新门禁并持久化；
+// 明文一并保存供界面回显与复制，应用后保留输入框内容不清空
+func (controller *UIController) onApplyGatePassword(*winc.Event) {
+	plaintext := controller.gatePassEdit.Text()
+	hash := hashAccessPassword(plaintext)
+	controller.config.PasswordHash = hash
+	controller.config.Password = plaintext
+	controller.fileServer.SetAccessPasswordHash(hash)
+	controller.saveConfig()
+	controller.updateGateHint()
+}
+
+// onCopyGatePassword 把密码输入框当前内容复制到系统剪贴板；框为空时提示先输入
+func (controller *UIController) onCopyGatePassword(*winc.Event) {
+	password := controller.gatePassEdit.Text()
+	if password == "" {
+		winc.MsgBoxOk(controller.mainWindow, msgPromptTitle, msgNeedPassCopy)
+		return
+	}
+	if err := copyToClipboard(password); err != nil {
+		winc.Errorf(controller.mainWindow, errCopyFailed, err)
+		return
+	}
+	winc.MsgBoxOk(controller.mainWindow, msgCopiedTitle, password)
+}
+
+// updateGateHint 同步密码行的生效状态提示
+func (controller *UIController) updateGateHint() {
+	if controller.config.PasswordHash == "" {
+		controller.gateHint.SetText(hintPassOff)
+	} else {
+		controller.gateHint.SetText(hintPassOn)
+	}
 }
 
 // validateStartParams 校验启动/重启所需参数：共享目录已选 + 端口合法；供手动启动与目录变更重启复用
@@ -446,14 +543,15 @@ func (controller *UIController) onWindowClose(*winc.Event) {
 	winc.Exit()
 }
 
-// applyRunningState 同步界面到运行/空闲两种状态：切换启停按钮文字、状态标签，并刷新复制/打开按钮可用态
+// applyRunningState 同步界面到运行/空闲两种状态：切换启停按钮文字与状态标签，并刷新复制/打开按钮可用态
 func (controller *UIController) applyRunningState(running bool) {
 	controller.updateAccessButtonsEnabled()
 	if running {
-		accessURL := buildAccessURL(controller.currentIP(), controller.portEdit.Text())
 		controller.shareButton.SetText(buttonStop)
 		controller.statusLabel.setStatus(statusRunning, statusColorRunning)
-		controller.urlLabel.SetText(textURLPrefix + accessURL)
+		if controller.currentURL != "" {
+			controller.urlLabel.SetText(textURLPrefix + controller.currentURL)
+		}
 		return
 	}
 	controller.shareButton.SetText(buttonStart)
@@ -461,25 +559,34 @@ func (controller *UIController) applyRunningState(running bool) {
 }
 
 // loadIPAddresses 扫描网卡并填充下拉框，默认选中第一个有效 IP
-func (controller *UIController) loadIPAddresses() {
-	ips, err := ScanLANIPv4Addresses()
+func (controller *UIController) loadIPAddresses() bool {
+	entries, err := ScanLANIPv4()
 	if err != nil {
 		winc.Errorf(controller.mainWindow, "%s", err)
-		return
+		return false
 	}
+	controller.applyIPAddresses(entries)
+	return true
+}
 
-	controller.lanIPs = ips
+// applyIPAddresses 优先保留当前选择；旧地址失效则选新地址，无网卡时清除旧地址与二维码。
+// 下拉项文本只放 IP，网卡名由自绘列表单独显示，保证收起后窄下拉框仍能完整显示地址
+func (controller *UIController) applyIPAddresses(entries []LANIP) {
+	preferredIP := controller.currentIP()
+	if preferredIP == "" {
+		preferredIP = controller.config.SelectedIP
+	}
+	selectedIndex := preferredIPIndex(entries, preferredIP)
 	controller.ipComboBox.DeleteAllItems()
-	for index, ip := range ips {
-		controller.ipComboBox.InsertItem(index, ip)
+	controller.lanIPs = entries
+	for index, entry := range entries {
+		controller.ipComboBox.InsertItem(index, entry.IP)
 	}
-	if len(ips) > 0 {
-		controller.ipComboBox.SetSelectedItem(controller.initialIPIndex(ips))
-	}
+	controller.ipComboBox.SetSelectedItem(selectedIndex)
 	controller.refreshQRCode()
 }
 
-// applyLoadedConfig 将上次保存的查看目录与上传目录回填到界面
+// applyLoadedConfig 将上次保存的查看目录、上传目录与访问密码状态回填到界面
 func (controller *UIController) applyLoadedConfig() {
 	if controller.config.Directory != "" {
 		controller.selectedDir = controller.config.Directory
@@ -489,6 +596,11 @@ func (controller *UIController) applyLoadedConfig() {
 		controller.uploadDir = controller.config.UploadDirectory
 		controller.uploadEdit.SetText(controller.config.UploadDirectory)
 	}
+	// 密码只存哈希，重启后直接恢复门禁生效状态
+	controller.fileServer.SetAccessPasswordHash(controller.config.PasswordHash)
+	controller.updateGateHint()
+	// 回显明文密码，供查看与复制
+	controller.gatePassEdit.SetText(controller.config.Password)
 }
 
 // saveConfig 采集当前界面状态并持久化（尽力而为，失败仅记录）
@@ -498,20 +610,12 @@ func (controller *UIController) saveConfig() {
 		UploadDirectory: controller.uploadDir,
 		Port:            controller.portEdit.Text(),
 		SelectedIP:      controller.currentIP(),
+		PasswordHash:    controller.config.PasswordHash,
+		Password:        controller.config.Password,
 	}
 	if err := config.Save(); err != nil {
 		log.Println("保存配置失败:", err)
 	}
-}
-
-// initialIPIndex 返回启动时应选中的 IP 下标：优先上次保存的，否则第一个
-func (controller *UIController) initialIPIndex(ips []string) int {
-	for index, ip := range ips {
-		if ip == controller.config.SelectedIP {
-			return index
-		}
-	}
-	return 0
 }
 
 // refreshQRCode 依据当前 IP 与端口重绘二维码；条件不满足时显示占位提示
@@ -519,7 +623,11 @@ func (controller *UIController) refreshQRCode() {
 	accessURL, ok := controller.currentAccessURL()
 	if !ok {
 		controller.currentURL = ""
-		controller.urlLabel.SetText(hintQRPlaceholder)
+		if controller.currentIP() == "" {
+			controller.urlLabel.SetText(hintNoIP)
+		} else {
+			controller.urlLabel.SetText(hintQRPlaceholder)
+		}
 		controller.showQRResult(false)
 		return
 	}
@@ -618,7 +726,7 @@ func (controller *UIController) currentIP() string {
 	if index < 0 || index >= len(controller.lanIPs) {
 		return ""
 	}
-	return controller.lanIPs[index]
+	return controller.lanIPs[index].IP
 }
 
 // currentAccessURL 拼接当前访问地址，IP 未选或端口非法时返回 false

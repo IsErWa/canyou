@@ -3,7 +3,7 @@ REM Canyou 构建脚本：关闭 CGO，去除调试符号，以 GUI 子系统(-H
 REM 图标与版本信息（描述/公司/版权等）由 versioninfo.json 经 goversioninfo 生成 resource.syso 自动嵌入
 REM   首次需安装：go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 REM CMD set VER=v1.0.1 && build.bat
-REM PowerShell $env:VER="v1.0.1"; if ($LASTEXITCODE -eq 0) { .\build.bat }
+REM PowerShell $env:VER="v1.0.1"; .\build.bat
 REM github打版 git tag v1.0.1 && git push origin v1.0.1
 set CGO_ENABLED=0
 goversioninfo -64

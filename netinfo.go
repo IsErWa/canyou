@@ -13,22 +13,43 @@ var virtualAdapterKeywords = []string{
 	"virtual", "vmnet", "loopback", "npcap", "zanata",
 }
 
-// ScanLANIPv4Addresses 扫描本机所有处于启用状态的网卡，返回过滤后的局域网 IPv4 地址（已排序）
-func ScanLANIPv4Addresses() ([]string, error) {
+// LANIP 一个可共享的局域网 IPv4 地址及其所属网卡名
+type LANIP struct {
+	IP      string
+	Adapter string
+}
+
+// ScanLANIPv4 扫描本机所有处于启用状态的网卡，返回过滤后的局域网 IPv4 地址与网卡名（按 IP 排序）
+func ScanLANIPv4() ([]LANIP, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, fmt.Errorf("扫描网卡失败: %w", err)
 	}
 
-	var addresses []string
+	var addresses []LANIP
 	for _, iface := range interfaces {
 		if !isActiveInterface(iface) {
 			continue
 		}
-		addresses = append(addresses, lanIPv4AddressesOf(iface)...)
+		for _, ip := range lanIPv4AddressesOf(iface) {
+			addresses = append(addresses, LANIP{IP: ip, Adapter: iface.Name})
+		}
 	}
-	sort.Strings(addresses)
+	sort.Slice(addresses, func(i, j int) bool { return addresses[i].IP < addresses[j].IP })
 	return addresses, nil
+}
+
+// preferredIPIndex 在刷新后的地址中保留原选择；原地址失效时回退首项，无地址时取消选择。
+func preferredIPIndex(entries []LANIP, preferredIP string) int {
+	for index, entry := range entries {
+		if entry.IP == preferredIP {
+			return index
+		}
+	}
+	if len(entries) == 0 {
+		return -1
+	}
+	return 0
 }
 
 // isActiveInterface 判断网卡是否启用且不是虚拟网卡

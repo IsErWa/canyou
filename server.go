@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -18,11 +19,13 @@ type FileServer struct {
 	httpSrv  *http.Server
 	listener net.Listener
 	running  bool
+	chat     *chatManager
+	gate     *accessGate
 }
 
 // NewFileServer 创建一个处于空闲状态的共享服务实例
 func NewFileServer() *FileServer {
-	return &FileServer{}
+	return &FileServer{gate: newAccessGate()}
 }
 
 // Windows Winsock 监听失败的常见错误码。
@@ -64,13 +67,19 @@ func (server *FileServer) Start(viewDir, uploadDir string, port int) error {
 		return fmt.Errorf("启动服务失败: %w", err)
 	}
 
-	server.httpSrv = &http.Server{Handler: newShareHandler(viewDir, uploadDir)}
+	server.chat = newChatManager("")
+	// 消息随服务启动而开启、随停止而关闭，界面不再有独立开关；打开失败不影响文件共享
+	if err := server.chat.Enable(); err != nil {
+		log.Println("打开消息失败:", err)
+	}
+	httpSrv := &http.Server{Handler: server.gate.intercept(newShareHandler(viewDir, uploadDir, server.chat))}
+	server.httpSrv = httpSrv
 	server.listener = listener
 	server.running = true
 
 	// 服务在独立协程运行，避免阻塞 UI 主线程；Close() 触发的 ErrServerClosed 属正常停止
 	go func() {
-		if err := server.httpSrv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := httpSrv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logServiceFailure(err)
 		}
 	}()
@@ -85,10 +94,24 @@ func (server *FileServer) Stop() {
 	if server.httpSrv == nil {
 		return
 	}
+	server.chat.Disable()
 	server.httpSrv.Close()
 	server.httpSrv = nil
 	server.listener = nil
 	server.running = false
+}
+
+// ChatEnabled 消息随共享服务同生命周期，仅用于状态查询与测试断言。
+func (server *FileServer) ChatEnabled() bool {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	return server.running && server.chat != nil && server.chat.Enabled()
+}
+
+// SetAccessPasswordHash 热更新门禁密码哈希（SHA-256 hex，空串取消密码），无需重启服务；
+// 已授权设备名单保持不变
+func (server *FileServer) SetAccessPasswordHash(hash string) {
+	server.gate.SetPasswordHash(hash)
 }
 
 // IsRunning 返回服务当前是否处于运行状态

@@ -31,11 +31,13 @@ func applyWindowIcon(form *winc.Form) {
 }
 
 // newShareHandler 组装共享站点路由：内嵌 favicon、目录浏览页（含上传与批量打包下载）、上传接口、zip 打包接口，其余回退到静态文件服务
-func newShareHandler(viewDir, uploadDir string) http.Handler {
+func newShareHandler(viewDir, uploadDir string, chat *chatManager) http.Handler {
 	fileServer := http.FileServer(http.Dir(viewDir))
 
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch {
+		case request.URL.Path == "/ws/chat":
+			chat.serveWebSocket(writer, request)
 		case request.URL.Path == "/favicon.ico":
 			writer.Header().Set("Content-Type", "image/x-icon")
 			writer.Header().Set("Cache-Control", "max-age=86400")
@@ -44,8 +46,10 @@ func newShareHandler(viewDir, uploadDir string) http.Handler {
 			handleFileUpload(writer, request, uploadDir)
 		case request.URL.Path == "/zip":
 			handleZipDownload(writer, request, viewDir)
+		case request.URL.Path == "/api/list":
+			serveListAPI(writer, request, viewDir)
 		case isDirectoryPath(viewDir, request.URL.Path):
-			serveDirectoryListing(writer, request, viewDir, uploadDir)
+			serveIndexPage(writer, request, uploadDir, chat.Enabled())
 		default:
 			fileServer.ServeHTTP(writer, request)
 		}

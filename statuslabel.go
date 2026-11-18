@@ -25,6 +25,8 @@ func newStatusLabelView(parent winc.Controller) *statusLabelView {
 	view.InitWindow("winc_StatusLabel", parent, 0, w32.WS_CHILD|w32.WS_VISIBLE|w32.WS_CLIPSIBLINGS)
 	winc.RegMsgHandler(view)
 	view.SetFont(winc.DefaultFont)
+	// 自绘控件须位于分组框之上，否则 WS_CLIPSIBLINGS 会把整个文本区域裁掉。
+	w32.SetWindowPos(view.Handle(), 0, 0, 0, 0, 0, w32.SWP_NOMOVE|w32.SWP_NOSIZE|w32.SWP_NOACTIVATE)
 	return view
 }
 
@@ -32,6 +34,7 @@ func newStatusLabelView(parent winc.Controller) *statusLabelView {
 func (view *statusLabelView) setStatus(text string, color winc.Color) {
 	view.text = text
 	view.color = color
+	view.SetText(text)
 	view.Invalidate(true)
 }
 
@@ -44,12 +47,24 @@ func (view *statusLabelView) WndProc(msg uint32, wparam, lparam uintptr) uintptr
 		return 1 // 背景在 WM_PAINT 中统一绘制，避免闪烁
 
 	case w32.WM_PAINT:
-		canvas := winc.NewCanvasFromHwnd(view.Handle())
+		var paint w32.PAINTSTRUCT
+		dc := w32.BeginPaint(view.Handle(), &paint)
+		defer w32.EndPaint(view.Handle(), &paint)
+		if dc == 0 {
+			return 0
+		}
+		canvas := winc.NewCanvasFromHDC(dc)
 		defer canvas.Dispose()
 		// ClientRect() 会把客户区矩形误当作屏幕坐标二次转换而错位，故直接用 (0,0) 起点的客户区尺寸
 		rect := winc.NewRect(0, 0, view.ClientWidth(), view.ClientHeight())
-		canvas.FillRect(rect, winc.DefaultBackgroundBrush)
-		canvas.DrawText(view.text, rect, w32.DT_LEFT|w32.DT_VCENTER|w32.DT_SINGLELINE, view.Font(), view.color)
+		canvas.FillRect(rect, formBackdropBrush)
+		font := w32.SelectObject(dc, w32.HGDIOBJ(view.Font().GetHFONT()))
+		defer w32.SelectObject(dc, font)
+		w32.SetBkMode(dc, w32.TRANSPARENT)
+		w32.SetTextColor(dc, w32.COLORREF(view.color))
+		// -1 让 Win32 按 UTF-16 终止符计算长度，避免按 UTF-8 字节数越界读取中文。
+		w32.DrawText(dc, view.text, -1, rect.GetW32Rect(), w32.DT_LEFT|w32.DT_VCENTER|w32.DT_SINGLELINE)
+		return 0
 	}
 	return w32.DefWindowProc(view.Handle(), msg, wparam, lparam)
 }
