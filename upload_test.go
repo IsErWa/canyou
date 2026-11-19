@@ -1014,6 +1014,10 @@ func TestBuildVersionInjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	psScript, err := os.ReadFile("stamp_version.ps1")
+	if err != nil {
+		t.Fatal(err)
+	}
 	metadata, err := os.ReadFile("versioninfo.json")
 	if err != nil {
 		t.Fatal(err)
@@ -1034,6 +1038,8 @@ func TestBuildVersionInjection(t *testing.T) {
 		invalid                   bool
 	}{
 		{name: "环境变量优先于标签", version: "v2.0.1", tag: "v1.0.1", label: "2.0.1.0", parts: [4]int{2, 0, 1, 0}},
+		{name: "尾随空格自动修剪", version: "v2.0.1 ", tag: "v1.0.1", label: "2.0.1.0", parts: [4]int{2, 0, 1, 0}},
+		{name: "包裹引号自动修剪", version: `"v2.0.1"`, label: "2.0.1.0", parts: [4]int{2, 0, 1, 0}},
 		{name: "四段版本", version: "2.0.1.7", label: "2.0.1.7", parts: [4]int{2, 0, 1, 7}},
 		{name: "预发布版本", version: "v2.0.1-beta.1+build.7", label: "2.0.1-beta.1+build.7", parts: [4]int{2, 0, 1, 0}},
 		{name: "最近标签", tag: "v3.4.5", label: "3.4.5.0", parts: [4]int{3, 4, 5, 0}},
@@ -1049,11 +1055,12 @@ func TestBuildVersionInjection(t *testing.T) {
 				gitStub = "@echo off\r\necho called>git-called.txt\r\necho " + tc.tag + "\r\nexit /b 0\r\n"
 			}
 			for name, content := range map[string][]byte{
-				"git.cmd":          []byte(gitStub),
-				"build.bat":        script,
-				"versioninfo.json": metadata,
-				"go.mod":           []byte("module buildfixture\n\ngo 1.22\n"),
-				"main.go":          []byte("package main\nvar Version = \"dev\"\nfunc main() { println(Version) }\n"),
+				"git.cmd":           []byte(gitStub),
+				"build.bat":         script,
+				"stamp_version.ps1": psScript,
+				"versioninfo.json":  metadata,
+				"go.mod":            []byte("module buildfixture\n\ngo 1.22\n"),
+				"main.go":           []byte("package main\nvar Version = \"dev\"\nfunc main() { println(Version) }\n"),
 			} {
 				if err := os.WriteFile(filepath.Join(dir, name), content, 0o600); err != nil {
 					t.Fatal(err)
@@ -1065,7 +1072,7 @@ func TestBuildVersionInjection(t *testing.T) {
 				defer cancel()
 				command := exec.CommandContext(ctx, name, args...)
 				command.Dir = dir
-				command.Env = append(os.Environ(), "VER="+tc.version, "GOOS=windows", "GOARCH=amd64", "GOWORK=off", "GOFLAGS=")
+				command.Env = append(os.Environ(), "VER="+tc.version, "VERFILE="+filepath.Join(dir, "normalized-ver.txt"), "GOOS=windows", "GOARCH=amd64", "GOWORK=off", "GOFLAGS=")
 				return command.CombinedOutput()
 			}
 			mustRun := func(name string, args ...string) []byte {
@@ -1129,7 +1136,7 @@ func TestBuildVersionInjection(t *testing.T) {
 					t.Fatalf("非构建字段被改动: %s", key)
 				}
 			}
-			version := tc.version
+			version := strings.Trim(tc.version, ` 	"`)
 			if version == "" {
 				version = tc.tag
 			}
