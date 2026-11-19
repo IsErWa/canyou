@@ -1002,3 +1002,163 @@ func TestIndexShellIsDirectoryAgnostic(t *testing.T) {
 		t.Fatalf("文件直链行为回归: code=%d body=%q", recorder.Code, recorder.Body.String())
 	}
 }
+
+// TestBuildVersionInjection 在临时目录构建最小 EXE，校验 JSON、资源属性及运行时版本，不改项目版本文件。
+func TestBuildVersionInjection(t *testing.T) {
+	for _, name := range []string{"cmd.exe", "powershell.exe", "go", "goversioninfo"} {
+		if _, err := exec.LookPath(name); err != nil {
+			t.Skipf("构建版本集成测试需要 %s", name)
+		}
+	}
+	script, err := os.ReadFile("build.bat")
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata, err := os.ReadFile("versioninfo.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var template map[string]any
+	if err := json.Unmarshal(metadata, &template); err != nil {
+		t.Fatal(err)
+	}
+	template["IconPath"] = ""
+	template["StringFileInfo"].(map[string]any)["LegalCopyright"] = "Copyright © 2001 ErWa"
+	metadata, err = json.MarshalIndent(template, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, version, tag, label string
+		parts                     [4]int
+		invalid                   bool
+	}{
+		{name: "环境变量优先于标签", version: "v2.0.1", tag: "v1.0.1", label: "2.0.1.0", parts: [4]int{2, 0, 1, 0}},
+		{name: "四段版本", version: "2.0.1.7", label: "2.0.1.7", parts: [4]int{2, 0, 1, 7}},
+		{name: "预发布版本", version: "v2.0.1-beta.1+build.7", label: "2.0.1-beta.1+build.7", parts: [4]int{2, 0, 1, 0}},
+		{name: "最近标签", tag: "v3.4.5", label: "3.4.5.0", parts: [4]int{3, 4, 5, 0}},
+		{name: "无标签回退", label: "dev"},
+		{name: "数字上限", version: "v65535.0.0", label: "65535.0.0.0", parts: [4]int{65535, 0, 0, 0}},
+		{name: "非法格式", version: "v2.0.bad", invalid: true},
+		{name: "版本溢出", version: "v65536.0.0", invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			gitStub := "@echo off\r\necho called>git-called.txt\r\nexit /b 1\r\n"
+			if tc.tag != "" {
+				gitStub = "@echo off\r\necho called>git-called.txt\r\necho " + tc.tag + "\r\nexit /b 0\r\n"
+			}
+			for name, content := range map[string][]byte{
+				"git.cmd":          []byte(gitStub),
+				"build.bat":        script,
+				"versioninfo.json": metadata,
+				"go.mod":           []byte("module buildfixture\n\ngo 1.22\n"),
+				"main.go":          []byte("package main\nvar Version = \"dev\"\nfunc main() { println(Version) }\n"),
+			} {
+				if err := os.WriteFile(filepath.Join(dir, name), content, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run := func(name string, args ...string) ([]byte, error) {
+				t.Helper()
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+				defer cancel()
+				command := exec.CommandContext(ctx, name, args...)
+				command.Dir = dir
+				command.Env = append(os.Environ(), "VER="+tc.version, "GOOS=windows", "GOARCH=amd64", "GOWORK=off", "GOFLAGS=")
+				return command.CombinedOutput()
+			}
+			mustRun := func(name string, args ...string) []byte {
+				t.Helper()
+				output, err := run(name, args...)
+				if err != nil {
+					t.Fatalf("%s 执行失败: %v\n%s", name, err, output)
+				}
+				return output
+			}
+			startYear := time.Now().Year()
+			output, buildErr := run("cmd.exe", "/d", "/c", "build.bat")
+			endYear := time.Now().Year()
+			_, gitCalledErr := os.Stat(filepath.Join(dir, "git-called.txt"))
+			if (tc.version == "" && gitCalledErr != nil) || (tc.version != "" && !os.IsNotExist(gitCalledErr)) {
+				t.Fatalf("VER 与 Git 标签优先级错误: %v", gitCalledErr)
+			}
+			stamped, err := os.ReadFile(filepath.Join(dir, "versioninfo.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.invalid {
+				if buildErr == nil || !bytes.Equal(stamped, metadata) {
+					t.Fatalf("非法版本应中止构建且不改写元数据: %v\n%s", buildErr, output)
+				}
+				if _, err := os.Stat(filepath.Join(dir, "resource.syso")); !os.IsNotExist(err) {
+					t.Fatalf("非法版本不应生成资源: %v", err)
+				}
+				return
+			}
+			if buildErr != nil {
+				t.Fatalf("版本构建失败: %v\n%s", buildErr, output)
+			}
+			var info struct {
+				FixedFileInfo struct {
+					FileVersion, ProductVersion map[string]int
+				}
+				StringFileInfo map[string]string
+			}
+			if err := json.Unmarshal(stamped, &info); err != nil {
+				t.Fatalf("版本 JSON 无法解析（应为无 BOM 的 UTF-8）: %v", err)
+			}
+			for key, parts := range map[string]map[string]int{
+				"FileVersion": info.FixedFileInfo.FileVersion, "ProductVersion": info.FixedFileInfo.ProductVersion,
+			} {
+				if info.StringFileInfo[key] != tc.label {
+					t.Fatalf("%s 文字版本错误: %q", key, info.StringFileInfo[key])
+				}
+				for i, part := range []string{"Major", "Minor", "Patch", "Build"} {
+					if parts[part] != tc.parts[i] {
+						t.Fatalf("%s.%s 数字版本错误: %v", key, part, parts)
+					}
+				}
+			}
+			copyright := info.StringFileInfo["LegalCopyright"]
+			if copyright != fmt.Sprintf("Copyright © %d ErWa", startYear) && copyright != fmt.Sprintf("Copyright © %d ErWa", endYear) {
+				t.Fatalf("版权年份未取构建时的当前年份，或版权文字被改动: %q", copyright)
+			}
+			for key, value := range template["StringFileInfo"].(map[string]any) {
+				if key != "FileVersion" && key != "ProductVersion" && key != "LegalCopyright" && info.StringFileInfo[key] != value {
+					t.Fatalf("非构建字段被改动: %s", key)
+				}
+			}
+			version := tc.version
+			if version == "" {
+				version = tc.tag
+			}
+			if version == "" {
+				version = "dev"
+			}
+			executable := "Canyou-" + version + ".exe"
+			runtimeVersion := mustRun(filepath.Join(dir, executable))
+			if strings.TrimSpace(string(runtimeVersion)) != version {
+				t.Fatalf("程序运行时版本未正确注入: %s", runtimeVersion)
+			}
+			properties := mustRun("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "[Console]::OutputEncoding = New-Object Text.UTF8Encoding($false); (Get-Item -LiteralPath './"+executable+"').VersionInfo | Select-Object LegalCopyright,FileVersion,ProductVersion,FileMajorPart,FileMinorPart,FileBuildPart,FilePrivatePart,ProductMajorPart,ProductMinorPart,ProductBuildPart,ProductPrivatePart | ConvertTo-Json -Compress")
+			var resource map[string]any
+			if err := json.Unmarshal(properties, &resource); err != nil {
+				t.Fatalf("无法读取 EXE 版本属性: %v\n%s", err, properties)
+			}
+			if resource["LegalCopyright"] != copyright {
+				t.Fatalf("EXE 版权未使用新年份: %v", resource["LegalCopyright"])
+			}
+			for _, kind := range []string{"File", "Product"} {
+				if resource[kind+"Version"] != tc.label {
+					t.Fatalf("EXE %sVersion 未使用新版本: %v", kind, resource)
+				}
+				for i, part := range []string{"Major", "Minor", "Build", "Private"} {
+					if resource[kind+part+"Part"] != float64(tc.parts[i]) {
+						t.Fatalf("EXE 数字版本不匹配: %v", resource)
+					}
+				}
+			}
+		})
+	}
+}
