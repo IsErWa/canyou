@@ -7,7 +7,7 @@ REM Version stamping and the copyright year refresh live in stamp_version.ps1 (s
 REM   goversioninfo is required once: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
 REM CMD usage:        set "VER=v2.0.0" & build.bat
 REM PowerShell usage: $env:VER="v2.0.0"; .\build.bat
-REM GitHub release:   git tag v2.0.0; git push origin v2.0.0   (only v* tags trigger release.yml)
+REM GitHub release:   git tag v2.0.0-go-pc; git push origin v2.0.0-go-pc   (only v* tags trigger release.yml)
 pushd "%~dp0.."
 if errorlevel 1 exit /b 1
 set CGO_ENABLED=0

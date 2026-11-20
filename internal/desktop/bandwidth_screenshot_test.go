@@ -12,8 +12,6 @@ import (
 	"time"
 	"unsafe"
 
-	"Canyou/internal/netinfo"
-
 	"github.com/tadvi/winc/w32"
 )
 
@@ -33,10 +31,19 @@ func TestBandwidthDesktopScreenshots(t *testing.T) {
 	addWindowStyle(ctrl.mainWindow.Handle(), w32.WS_CLIPCHILDREN)
 	installFormBackdrop(ctrl.mainWindow)
 	applyWindowIcon(ctrl.mainWindow)
-	ctrl.dirEdit.SetText(ctrl.selectedDir)
-	ctrl.uploadEdit.SetText(ctrl.uploadDir)
-	if ips, err := netinfo.ScanLANIPv4(); err == nil && len(ips) > 0 {
-		ctrl.applyIPAddresses(ips)
+	// 截图仅展示匿名演示路径；实际服务仍使用隔离临时目录，不修改用户配置。
+	// 保留测试夹具的回环 IP，不扫描或展示用户的真实网卡信息。
+	const demoViewDir = `D:\CanyouDemo\共享文件`
+	const demoUploadDir = `D:\CanyouDemo\接收文件`
+	ctrl.dirEdit.SetText(demoViewDir)
+	ctrl.uploadEdit.SetText(demoUploadDir)
+	captureMain := func(name string) {
+		t.Helper()
+		if ctrl.dirEdit.Text() != demoViewDir || ctrl.uploadEdit.Text() != demoUploadDir || ctrl.currentIP() != "127.0.0.1" {
+			t.Fatal("截图中出现了非匿名的目录或网卡信息")
+		}
+		pumpDesktopMessages()
+		captureDesktopWindow(t, ctrl.mainWindow.Handle(), filepath.Join(output, name))
 	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -49,14 +56,12 @@ func TestBandwidthDesktopScreenshots(t *testing.T) {
 	ctrl.onApplyGatePassword(nil)
 	centerOnCursorMonitor(ctrl.mainWindow)
 	ctrl.mainWindow.Show()
-	pumpDesktopMessages()
-	captureDesktopWindow(t, ctrl.mainWindow.Handle(), filepath.Join(output, "server-stopped.png"))
+	captureMain("server-stopped.png")
 	ctrl.startService()
 	if !ctrl.fileServer.IsRunning() {
 		t.Fatal("隔离服务未启动")
 	}
-	pumpDesktopMessages()
-	captureDesktopWindow(t, ctrl.mainWindow.Handle(), filepath.Join(output, "server.png"))
+	captureMain("server.png")
 	dialog := ctrl.newBandwidthDialog()
 	defer dialog.form.Close()
 	for _, edit := range dialog.edits {
