@@ -1,6 +1,6 @@
 # Canyou
 
-> 一个轻量的 Windows 桌面小工具：一键把本地文件夹共享到局域网，手机 / 同网段设备扫码即可浏览、下载、上传。
+> 轻量的 Windows 局域网共享工具：一个 EXE，手机扫码即可浏览、预览、下载和上传文件，也能通过公共聊天室交流消息。支持访问密码、在线设备与深浅色主题。
 
 **简体中文** · [English](./README.en.md)
 
@@ -8,26 +8,111 @@
 
 ---
 
-## 📸 界面预览
+## 📸 场景截图
 
-**服务端（桌面工具）** — 设置目录、选择本机 IP 与端口，自动生成访问二维码：
+以下截图来自 `v2.0.0` 的真实运行界面，目录、密码、设备和消息均为隔离的演示数据。桌面网页视口为 1440 × 900，手机截图为浏览器模拟的 390 × 844 视口，不代表手机真机测试。当前应用界面为中文。
 
-![服务端](./img/server.png)
+### 主程序：配置与启停
 
-**客户端（浏览器网页）** — 手机 / 同网段设备扫码后即可浏览、下载、上传：
+| 已配置，尚未启动 | 共享服务运行中 |
+| --- | --- |
+| ![主程序未运行：目录、网卡、端口与访问密码](./docs/images/server-stopped.png) | ![主程序运行中：二维码、访问地址与停止服务按钮](./docs/images/server.png) |
 
-![客户端](./img/client.png)
+### 桌面：文件与消息并排
+
+![桌面工作台：文件列表与公共聊天室](./docs/images/chat-desktop.png)
+
+### 手机：文件与消息切换
+
+| 文件浏览 | 公共聊天室 |
+| --- | --- |
+| ![手机文件列表：文件信息分行显示](./docs/images/files-mobile.png) | ![手机聊天室：消息气泡与发送区](./docs/images/chat-mobile.png) |
+
+<details>
+<summary>访问验证：首次访问、密码错误与手机入口</summary>
+
+设置访问密码后，新设备先验证密码，已授权设备再次访问时可自动通过。
+
+![桌面访问密码验证](./docs/images/gate.png)
+![密码错误时的提示](./docs/images/gate-error.png)
+![手机访问密码验证](./docs/images/gate-mobile.png)
+
+</details>
+
+<details>
+<summary>文件操作：根目录、子目录、批量下载与未读提醒</summary>
+
+点击文件夹进入子目录，使用面包屑或返回按钮导航；勾选文件 / 文件夹后可打包下载。浏览文件时仍能收到消息并显示未读数。
+
+![桌面文件列表](./docs/images/client.png)
+![子目录与面包屑导航](./docs/images/directory.png)
+![多选文件夹后准备打包下载](./docs/images/files-selection.png)
+![文件视图中的消息未读提醒](./docs/images/chat-unread.png)
+
+</details>
+
+<details>
+<summary>媒体预览：图片、音频与视频</summary>
+
+点击媒体文件名打开浮层，支持前后切换和关闭；文件行尾的下载按钮仍直接下载。下面的图片、WAV 和 WebM 均为可加载的演示文件。
+
+![图片浮层预览](./docs/images/preview-image.png)
+![音频浮层与播放控件](./docs/images/preview-audio.png)
+![视频浮层与播放控件](./docs/images/preview-video.png)
+
+</details>
+
+<details>
+<summary>上传：文件选择、分页、成功结果与手机布局</summary>
+
+选择或拖入多个文件后可逐项移除；超过 5 个文件时分页显示。上传结果留在当前窗口，文件保存到主程序配置的上传目录。
+
+![桌面上传窗口：已选文件与分页](./docs/images/upload-desktop.png)
+![上传成功后的就地反馈](./docs/images/upload-result.png)
+![手机上传窗口](./docs/images/upload-mobile.png)
+
+</details>
+
+<details>
+<summary>在线设备：桌面与手机</summary>
+
+查看当前连接的设备、设备编号、名称与 IP；“我”标识当前设备。这里是实时在线列表，不是授权名单管理页。
+
+![桌面在线设备列表](./docs/images/devices-desktop.png)
+![手机在线设备列表](./docs/images/devices-mobile.png)
+
+</details>
+
+<details>
+<summary>设置与外观：浅色、深色、设备资料及聊天保留条数</summary>
+
+设置与消息、在线设备是平级面板。外观支持深色、浅色和跟随系统；名称、头像颜色与聊天保留条数各自保存。
+
+![桌面浅色设置](./docs/images/settings-desktop-light.png)
+![桌面深色设置](./docs/images/settings-desktop-dark.png)
+![桌面深色文件列表](./docs/images/files-desktop-dark.png)
+
+| 手机浅色设置 | 手机深色设置 | 手机深色文件列表 |
+| --- | --- | --- |
+| ![手机浅色设置](./docs/images/settings-mobile-light.png) | ![手机深色设置](./docs/images/settings-mobile-dark.png) | ![手机深色文件列表](./docs/images/files-mobile-dark.png) |
+
+</details>
 
 ## ✨ 功能特性
 
 - 📂 **双目录配置**：分别设置「查看目录」（供浏览 / 下载）与「上传目录」（接收网页上传）
 - 🖼️ **二维码直达**：选择本机 IP 与端口后自动生成访问二维码，手机扫码即开
 - ⬇️ **灵活下载**：每个文件可单独下载；勾选多个文件或文件夹即可批量下载，服务端实时流式打包为 zip（不落临时文件）
-- 📤 **悬浮上传窗**：网页右下角上传窗支持拖拽 / 多选、逐个移除、数量过多自动分页、手机端全宽；上传结果就地显示，无需跳转页面
-- 🌐 **现代响应式网页**：自动适配深色 / 浅色模式，标题栏与工具栏滚动吸顶，列表按「文件夹优先 + 修改时间」排序
+- 📤 **就地上传**：顶栏打开上传窗口，支持拖拽 / 多选、逐项移除、每页 5 个文件；手机端自适应，上传结果无需跳转
+- 🖼️ **分类预览**：图片、音频与视频使用浮层；PDF、HTML、文本和代码文件在新标签页打开；其他类型下载，实际预览能力取决于浏览器与编码格式
+- 🌐 **响应式单页工作台**：目录导航不刷新整页；宽屏保留文件区与工具面板，窄屏切换文件 / 消息；列表按「文件夹优先 + 修改时间」排序
+- 💬 **公共聊天室**：访问页面即自动连接，支持历史消息、未读提醒、掉线自动重连与手动重连；浏览文件、切换面板不会主动断开聊天连接
+- 👥 **在线设备与个人资料**：实时设备列表、稳定设备编号、自定义名称及 8 种预设头像颜色
+- 🎨 **三种外观模式**：深色 / 浅色 / 跟随系统，主题偏好按设备保存
+- 🔐 **可选访问门禁**：设置密码时，新设备验证后登记；未设置密码时，网页自动登记，无需输入密码。已授权设备再次访问可自动通过；更改密码无需重启服务，但不会撤销已有授权
 - 🔗 **一键操作**：复制访问地址、用默认浏览器打开（仅在服务运行且地址有效时可用）
-- ▶️ **启停可控**：单个按钮切换「启动 / 停止共享」，运行状态以灰 / 绿两色实时显示
-- 💾 **配置持久化**：目录、端口、上次选中的 IP 自动保存到 `%AppData%/Canyou/config.json`
+- ▶️ **启停与网络刷新**：单个按钮切换「启动服务 / 停止服务」；刷新或切换 IP 仅更新地址、二维码，不重启共享服务
+- 💾 **本地持久化**：保存目录、端口、IP 和访问密码配置；SQLite 保存聊天记录、已授权设备及其名称、头像颜色和主题
 - 🛡️ **健壮的端口处理**：端口输入框仅允许数字并限制 1–65535；端口被占用 / 被系统保留时给出中文友好提示
 - 🪟 **无控制台黑框**：以 GUI 子系统编译，启动即用，不闪命令行窗口
 
@@ -39,13 +124,56 @@
 
 ## 🚀 使用方法
 
-1. 双击运行 `Canyou.exe`
-2. 选择「查看目录」（可选「上传目录」）
-3. 选择本机 IP、输入端口（默认 `8080`）
-4. 点击「启动共享」
-5. 用手机扫描界面中的二维码，或在同网段设备浏览器打开 `http://<IP>:<端口>`
+1. 从 [Releases](https://github.com/IsErWa/canyou/releases) 获取程序，或自行构建；双击运行 `Canyou-<版本>.exe`（本地构建产物位于 `dist/bin/`）。
+2. 选择「查看目录」，按需设置独立的「上传目录」；不设置上传目录时，网页不提供上传入口。
+3. 选择可被其他设备访问的本机 IP、输入端口（默认 `8080`）。网卡变化后可点击「刷新」。
+4. 如需访问验证，输入「访问密码」并点击「设置密码」；清空后再次点击可关闭门禁。「复制」复制密码框当前内容。
+5. 点击「启动服务」，扫描二维码或在同网段设备打开 `http://<IP>:<端口>`。如 Windows 防火墙提示，请仅按需允许受信任的专用网络访问。
+6. 设置了访问密码时，新设备先输入密码；未设置密码时，网页自动登记设备，无需输入密码。进入后可浏览文件，或通过顶栏打开上传、消息、在线设备、设置。关闭工具面板返回文件视图。
 
-> 运行中修改目录或端口会即时生效；若把端口清空 / 改成非法值，服务会自动停止。
+### 常用操作
+
+| 场景 | 操作 |
+| --- | --- |
+| 浏览与下载 | 点击文件夹进入；点击文件名预览 / 打开；行尾按钮下载；多选后点击工具栏下载按钮，生成 ZIP |
+| 上传文件 | 点击「上传」，选择或拖入文件，检查列表后点击「上传文件」；全部成功后清空待上传列表 |
+| 发送消息 | 桌面 `Enter` 发送、`Shift+Enter` 换行；手机回车换行，点击「发送」提交 |
+| 修改设备资料 | 在「设置」中修改名称后点击「保存名称」；选择头像色块后点击「保存颜色」 |
+| 切换外观 | 在「设置」中选择深色、浅色或跟随系统，选择后自动保存 |
+| 聊天记录上限 | 默认保留 200 条，可设为 1–10000 条；这是全局设置，所有已连接设备均可修改，减少上限会删除最旧记录 |
+| 连接中断 | 页面最多自动重试 5 次；仍未连接时，可点击「重新连接」 |
+
+> 运行中修改目录或有效端口会重启服务以应用配置，现有连接会短暂中断；清空 / 输入非法端口会停止服务。刷新或切换 IP 不重启服务。刷新网页不会恢复尚未提交的上传文件。
+
+### 设备授权流程
+
+网页先检查已有登记；未登记且无需密码时，自动请求授权。设置密码时，校验密码正确后才登记。`check`、`unlock` 都以数据库记录为准，不因命中旧缓存而跳过查询。
+
+| 接口（POST，JSON 请求体） | 职责 |
+| --- | --- |
+| `/gate/check` | 根据 `did` 查询设备记录；存在则更新授权缓存并返回设备资料。不存在则清除旧缓存，返回 `ok:false`、`allowed:false` 及 `requiresPassword`，不新增记录 |
+| `/gate/unlock` | 接收 `did`、可选设备名 `name` 及访问密码 `password`；未设置密码时可省略密码。验证通过后先查库，仅在记录缺失时写入，确认资料可读取后更新缓存并返回 |
+| `/gate/theme` | 仅保存已登记设备的主题；设备记录缺失时返回错误，需刷新页面重新授权，不自动补建记录 |
+
+`check` 与 `unlock` 成功时返回 `ok:true`、`allowed:true` 及 `id`、`did`、`name`、`theme`。重复授权保留已有编号、名称、头像颜色、主题及授权时间。密码不匹配时 `unlock` 返回 HTTP 403；数据库读写失败返回 HTTP 500，不会虚报授权成功。
+
+## 💾 数据保存与备份
+
+| 数据 | 默认位置 |
+| --- | --- |
+| 主程序配置 | `%APPDATA%\Canyou\config.json` |
+| 聊天记录、全局保留条数、设备授权和资料 | `%LOCALAPPDATA%\Programs\Canyou\chat.db` |
+| 共享与上传文件 | 主程序中分别选择的查看目录、上传目录 |
+| 本地打包程序 | `dist/bin/Canyou-<版本>.exe` |
+| 文档转 HTML 脚本 | `scripts/md2html.sh`（运行 `bash scripts/md2html.sh`，输出至 `dist/docs/`） |
+
+聊天与门禁共用同一个 SQLite 数据库。`LOCALAPPDATA` 未设置时，数据库路径回退到用户目录下的 `AppData\Local\Programs\Canyou\chat.db`。备份前先退出主程序，再复制配置、数据库及所需共享文件；EXE 不包含这些运行数据。
+
+浏览器使用站点本地存储保存设备标识与界面状态。更换浏览器或清理站点数据后，可能需要重新验证。
+
+如果直接删除 `allowed_devices` 中的设备记录，下次 `check` 检查到缺失时会清除该设备的授权缓存。刷新网页后，有密码时需重新验证，无密码时会自动调用 `unlock` 重新登记。重新登记按新记录处理，编号和资料不保证与删除前一致。
+
+> 删除记录不等于立即踢出设备：程序不监听数据库删行，也不会主动断开已有 WebSocket。聊天改名、换色目前仍可能补建设备记录，因此直接删记录不是可靠的实时撤权或强制下线方式。
 
 ## 🔨 从源码构建
 
@@ -65,21 +193,46 @@ cd canyou
   go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
   ```
 
-构建（Windows）：
+构建（Windows CMD）：
 
 ```bat
+set "VER=v2.0.0"
 build.bat
 ```
 
-脚本会依次生成 `resource.syso` 并编译出 `Canyou.exe`，关键参数：
+Windows PowerShell 5.1：
 
+```powershell
+$env:VER = "v2.0.0"
+.\build.bat
 ```
-go build -trimpath -ldflags "-s -w -H=windowsgui" -o Canyou.exe .
+
+根入口转调 `scripts/build.bat`，也可从其他工作目录通过绝对路径调用。未设置 `VER` 时沿用最近 Git 标签，无标签时为 `dev`；版本不支持项目前缀。
+
+脚本更新 `build/windows/versioninfo.json`，生成 `cmd/canyou/resource.syso`，输出 `dist/bin/Canyou-<版本>.exe`。网页与图标均嵌入 EXE，运行时无需源码目录。关键参数（以 CMD 为例）：
+
+```bat
+go build -trimpath -ldflags "-s -w -H=windowsgui -X main.Version=%VER%" -o "dist/bin/Canyou-%VER%.exe" ./cmd/canyou
 ```
+
+测试使用 `go test ./...` 与 `go vet ./...`；部分前端脚本测试需要 Node.js，未安装时会跳过。
 
 - `-s -w`：去除符号表与调试信息，减小体积
 - `-H=windowsgui`：GUI 子系统，运行时不分配控制台窗口
 - `CGO_ENABLED=0`：纯 Go 静态编译
+
+### 文档转 HTML
+
+导出文档需安装 [Node.js](https://nodejs.org/)（包含 npm）和 Bash（Windows 可使用 Git Bash），再安装 `marked` 命令行工具；这些不是运行 EXE 的依赖。
+
+```bash
+npm install -g marked
+bash scripts/md2html.sh
+```
+
+请确保 Bash 中可找到 `node` 和 `marked`，必要时将 npm 全局命令目录加入 `PATH`。脚本找不到 `marked` 时会提示安装命令，并以退出码 `1` 终止。
+
+默认导出中英文 README、图片和许可文件至 `dist/docs/`，可打开 `dist/docs/README.html` 或 `dist/docs/README.en.html`。也支持显式传入 Markdown 路径，例如 `bash scripts/md2html.sh README.en.md`。修改 README 后需重新运行脚本以同步 HTML；`dist/` 导出产物不提交。
 
 ## 🧱 技术栈
 
@@ -89,29 +242,46 @@ go build -trimpath -ldflags "-s -w -H=windowsgui" -o Canyou.exe .
 | 桌面 GUI | [tadvi/winc](https://github.com/tadvi/winc)（Win32 封装） |
 | 二维码 | [skip2/go-qrcode](https://github.com/skip2/go-qrcode) |
 | 文件服务 | 标准库 `net/http` |
+| 实时消息 | [gorilla/websocket](https://github.com/gorilla/websocket) |
+| 数据持久化 | [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite)（无需 CGO） |
+| 网页 | 原生 HTML / CSS / JavaScript，通过 `go:embed` 嵌入；无前端框架或 CDN |
 | 版本信息 / 图标 | `goversioninfo` + `go:embed` |
 
 ## 📁 项目结构
 
 ```
 .
-├── main.go          # 界面搭建、交互逻辑、启停与配置
-├── server.go        # 基于 net/http 的目录共享服务（启动 / 停止 / 端口错误处理）
-├── upload.go        # 网页端目录浏览、上传与下载接口处理
-├── zip.go           # 批量 / 文件夹下载的实时流式 zip 打包
-├── qrcode.go        # 访问地址生成二维码 PNG
-├── netinfo.go       # 扫描本机局域网 IPv4 地址
-├── config.go        # 配置持久化（%AppData%/Canyou/config.json）
-├── icon.go          # 内嵌图标资源
-├── statuslabel.go   # 自绘状态标签（灰 / 绿双色）
-├── numericedit.go   # 仅数字输入的原生编辑框（端口）
-├── build.bat        # 构建脚本
-└── versioninfo.json # EXE 版本信息与图标
+├── cmd/canyou/      # 极薄入口、版本变量及生成的 Windows 资源
+├── internal/
+│   ├── desktop/    # 原生窗口、控件、剪贴板与二维码
+│   ├── server/     # HTTP 生命周期、总路由和门禁组装
+│   ├── share/      # 目录列表、文件、上传与 ZIP
+│   ├── chat/       # WebSocket、聊天室和连接生命周期
+│   ├── gate/       # 密码、设备授权与门禁 API
+│   ├── device/     # 共用设备标识、名称、头像与主题规则
+│   ├── storage/    # SQLite 消息、设备与既有迁移
+│   ├── config/     # 配置、密码哈希与运行数据路径
+│   ├── netinfo/    # 网卡扫描与 IP 选择
+│   ├── assets/     # 共用嵌入图标
+│   └── webui/      # 嵌入渲染、templates/、styles/、scripts/
+├── scripts/        # 完整构建、版本注入、文档转换脚本
+├── build/windows/  # versioninfo.json
+├── tests/          # integration/ 跨包验收与 build/ 构建测试
+├── docs/images/    # README 图片
+├── dist/           # 构建与验收产物（不提交）
+│   ├── bin/        # 打包生成的 EXE
+│   └── docs/       # 导出的中英 HTML 文档与 images/；其他产物也放在 dist/
+├── build.bat       # 保留的根构建入口
+├── go.mod / go.sum
+├── README.md / README.en.md
+└── .github/workflows/release.yml
 ```
 
 ## ⚠️ 注意事项
 
-- 本工具面向**局域网内**的文件共享，**不具备加密与访问控制**，请勿在不可信网络下共享敏感目录。
+- 本工具面向**受信任的局域网**。访问密码和设备允许名单仅提供轻量门禁，**不提供 HTTPS 传输加密或强身份认证**；设备标识由浏览器提交，可以被刻意伪造，请勿直接暴露到公网或用于不可信网络。
+- 为便于主程序回显和复制，访问密码以**明文及其哈希**保存在配置文件中，请妥善保护本机账户与配置备份。密码通过 HTTP 提交，截图中的密码仅为演示值。
+- 更改密码不会撤销已授权设备；「在线设备」也不是撤销授权的管理入口。聊天是公共房间，所有已连接设备可读取保留的消息并修改全局保留条数。
 - 批量 / 文件夹下载采用**实时流式打包**：点击下载后边打包边传输、不占用磁盘临时空间，故下载确认可能略有延迟，且浏览器不显示总大小进度。
 - 网页上传的文件保存到独立的「上传目录」，与「查看目录」分开放置。
 - 若某端口无法监听，可能是被其它程序占用，或落在 Windows / Hyper-V 的**系统保留端口区间**，换一个端口即可。
@@ -119,4 +289,6 @@ go build -trimpath -ldflags "-s -w -H=windowsgui" -o Canyou.exe .
 
 ## 📄 许可
 
-Copyright © 2026 ErWa. All rights reserved.
+本项目采用 [MIT License](./LICENSE) 许可。使用、修改或分发时，请保留版权声明和许可文本。
+
+Copyright © 2026 ErWa.

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" id="themeColor" content="#f4f6fa">
+<title>Canyou 共享</title>
+<script>{{script "theme-bootstrap.js"}}</script>
+<style>{{style "theme.css"}}{{style "base.css"}}{{style "panels.css"}}{{style "workspace.css"}}</style>
+</head>
+<body>
+{{template "uiIcons"}}
+<div class="wrap">
+  <header class="topbar">
+    <div class="logo"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></div>
+    <div class="tb-titles"><div class="title">Canyou 共享</div><div class="sub">在同一网络，轻松分享 · {{.Version}}</div></div>
+    <div class="tb-actions">
+      {{if .CanUpload}}<button class="tbtn upload-toggle" type="button" id="uploadToggle" aria-haspopup="dialog" title="上传文件"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span class="action-label" id="uploadLabel">上传文件</span></button>{{end}}
+      {{if .CanChat}}<button class="tbtn section-entry" type="button" id="chatToggle" aria-controls="chatPanel" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>消息<span class="badge" data-unread hidden></span></button>
+      <button class="tbtn section-entry" id="chatDevicesToggle" type="button" aria-controls="devicesPanel" aria-expanded="false" title="在线设备(0)" disabled><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="action-label" id="chatDevicesLabel">在线设备(0)</span></button>
+      <button class="tbtn section-entry" id="chatSettingsToggle" type="button" aria-controls="settingsPanel" aria-expanded="false" title="设置"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="action-label">设置</span></button>{{end}}
+    </div>
+  </header>
+  {{if .CanChat}}<nav class="view-nav" aria-label="工作区导航">
+    <button type="button" id="filesTab" aria-controls="filesPanel" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>文件</button>
+    <button type="button" id="chatTab" aria-controls="chatPanel" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>消息<span class="badge" data-unread hidden></span></button>
+  </nav>{{end}}
+  <main class="workspace">
+    <section class="card files" id="filesPanel" aria-label="共享文件" data-base="/">
+      <div class="head"><h1 id="filesTitle" tabindex="-1">共享文件</h1><div class="pathbar"><button class="tbtn icon-btn" id="parentBtn" type="button" aria-label="返回上一级目录" disabled><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg></button><nav class="breadcrumbs" id="pathTitle" aria-label="目录路径"></nav></div></div>
+      <div class="file-toolbar"><span class="hint" id="selHint" role="status">正在加载…</span><div class="tools">
+        <button class="tbtn" type="button" id="selAll">全选</button><button class="tbtn" type="button" id="selNone" disabled>取消选择</button>
+        <button class="tbtn primary" type="button" id="zipBtn" disabled>下载</button>
+      </div></div>
+      <div class="columns" aria-hidden="true"><span></span><span>名称</span><span class="col-size">大小</span><span class="col-date">修改时间</span><span></span></div>
+      <div id="fileList" aria-busy="true"><div class="empty">正在加载文件…</div></div>
+    </section>
+    {{template "workspacePanels" .}}
+  </main>
+</div>
+  {{if .CanUpload}}
+  <dialog class="card upload-dialog" id="uploadDialog" aria-labelledby="uploadTitle">
+  <form class="upload" id="uploadPanel" method="post" action="/upload" enctype="multipart/form-data">
+    <div class="up-head">
+      <h2 id="uploadTitle">上传文件</h2>
+      <button class="up-close" type="button" id="uploadClose" aria-label="关闭上传窗口"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <label class="dz" id="dz">
+      <input class="file-input" type="file" name="file" id="fileInput" multiple>
+      <div class="ic"><svg class="icon" aria-hidden="true" style="width:36px;height:36px;color:var(--accent)"><use href="#i-upload"/></svg></div>
+      <div class="t1">点击<b>选择文件</b>或将文件拖拽到此处</div>
+      <div class="t2">支持多选 · 文件将保存到服务端的“上传目录”</div>
+    </label>
+    <div class="chips" id="chips"></div>
+    <div class="pager" id="pager" hidden></div>
+    <div class="actions">
+      <span class="hint" id="hint">尚未选择文件</span>
+      <button class="btn" type="submit" id="submit" disabled>上传文件</button>
+    </div>
+    <div class="up-result" id="uploadResult" role="status" hidden></div>
+  </form>
+  </dialog>
+  {{end}}
+<script>{{script "identity.js"}}</script>
+<script>{{script "theme.js"}}</script>
+<script>{{script "workspace.js"}}</script>
+<script>{{script "files.js"}}</script>
+
+<script>{{script "upload-dialog.js"}}</script>
+
+{{if .CanUpload}}
+<script>{{script "upload.js"}}</script>
+{{end}}
+{{if .CanChat}}<script>{{script "chat.js"}}</script>{{end}}
+</body>
+</html>

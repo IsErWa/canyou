@@ -1,0 +1,30 @@
+{{define "gatePage"}}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" id="themeColor" content="#f4f6fa">
+<title>Canyou · 访问验证</title>
+<script>{{script "theme-bootstrap.js"}}</script>
+<style>{{style "theme.css"}}{{style "gate.css"}}</style>
+</head>
+<body>
+<script>{{script "identity.js"}}</script>
+{{template "uiIcons"}}
+<main class="box">
+  <div class="ic"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg></div>
+  <p class="brand">Canyou 共享 · {{.Version}}</p>
+  <h1>访问此共享需要密码</h1>
+  <p class="sub">本设备尚未被局域网内的 Canyou 授权</p>
+  <div class="note" id="gateNote" role="status" aria-live="polite" aria-atomic="true"><span class="gate-spinner" aria-hidden="true"></span><span>正在核验设备身份…</span></div>
+  <form id="gateForm" hidden>
+    <label for="gatePass">访问密码</label>
+    <input id="gatePass" type="password" placeholder="请输入访问密码" autocomplete="current-password">
+    <button type="submit" id="gateBtn">验证并进入</button>
+    <div class="err" id="gateError" role="alert" hidden></div>
+  </form>
+</main>
+<script type="application/json" id="gateInit">{"next":{{.Next}}}</script>
+<script>{{script "gate.js"}}</script>
+</body>
+</html>{{end}}

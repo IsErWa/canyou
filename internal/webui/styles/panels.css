@@ -1,0 +1,100 @@
+
+.tool-panel{min-width:0;min-height:0;padding:20px 16px 16px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.tool-panel[hidden],.tool-panel [hidden],#chatToggle[hidden]{display:none}
+.tool-panel> :not(.panel-page){flex-shrink:0}
+.chat-head,.chat-row{display:flex;align-items:center;gap:8px}
+.chat-head{flex-wrap:nowrap;flex:none}.chat-head h2{font-size:17px;margin:0 auto 0 0;letter-spacing:-.3px}.chat-head .up-close{flex:none}.tool-panel .panel-close{min-width:44px;min-height:44px;align-items:center;justify-content:center}
+.chat-toolbar{display:flex;align-items:center}.chat-toolbar .chat-status{flex:1}
+.chat-head .tbtn{padding:5px 9px}.chat-head .tbtn[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.chat-row .tbtn{flex:none}
+.tool-panel input,.tool-panel textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;min-width:0}
+.tool-panel input:focus,.tool-panel textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.tool-panel label{font-size:12px;color:var(--muted);flex:none}
+.chat-status{font-size:12px;color:var(--muted);min-width:80px;overflow-wrap:anywhere;margin-right:auto}.chat-status::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px}
+.chat-status.bad{color:var(--bad)}.chat-status.ok{color:var(--ok)}
+.chat-identity{font-size:11px;color:var(--muted);overflow-wrap:anywhere;font-variant-numeric:tabular-nums;flex:none;max-width:100%;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.panel-page{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;overflow:auto;overscroll-behavior:contain}
+#chatNameBlock{display:flex;flex-direction:column;gap:6px;width:100%;max-width:300px}
+#chatNameBlock .chat-row{width:100%}
+#chatSettingsName #chatNameBlock{max-width:none}
+.chat-name{flex:1;width:0;font-size:15px;padding:10px}
+.chat-chat{overflow:hidden;position:relative}
+.chat-log{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable;overscroll-behavior:contain;padding:8px 2px 12px}
+.chat-empty{font-size:12px;text-align:center;color:var(--muted);padding:18px 0}
+.chat-msg-row{display:flex;align-items:flex-start;gap:8px;margin:0 0 10px}
+.chat-msg-row.own{flex-direction:row-reverse}
+.chat-msg-row .chat-message{margin:0;min-width:0;max-width:calc(100% - 44px)}
+.chat-msg-row .chat-avatar{width:32px;height:32px;flex:none;font-size:14px}
+.chat-msg-row .chat-avatar::after{display:none}
+.chat-message{position:relative;padding:9px 12px;border:1px solid var(--border);border-radius:4px 12px 12px 12px;background:var(--card);overflow-wrap:anywhere;box-shadow:0 1px 3px rgba(20,25,40,.06)}
+.chat-message.own{--own-bg:color-mix(in srgb,var(--accent) 5%,var(--card));--own-bd:color-mix(in srgb,var(--accent) 35%,var(--border));border-color:var(--own-bd);background:var(--own-bg);border-radius:12px 4px 12px 12px}
+/* 靠头像一侧顶部伸出的圆角气泡尾巴：别人的朝左、自己的朝右 */
+.chat-message:not(.own)::before,.chat-message.own::before{content:'';position:absolute;top:2px;width:10px;height:10px;transform:rotate(45deg)}
+.chat-message:not(.own)::before{left:-6px;background:var(--card);border-left:1px solid var(--border);border-bottom:1px solid var(--border);border-bottom-left-radius:3px}
+.chat-message.own::before{right:-6px;background:var(--own-bg);border-right:1px solid var(--own-bd);border-top:1px solid var(--own-bd);border-top-right-radius:3px}
+.chat-meta{font-size:11px;color:var(--muted);margin-bottom:5px;white-space:pre-wrap}
+.chat-body{font-size:14px;white-space:pre-wrap;line-height:1.7}
+.chat-compose{position:relative;margin:0;flex-shrink:0}
+.tool-panel .chat-compose textarea{display:block;width:100%;resize:none;min-height:46px;max-height:120px;font-size:14px;line-height:1.5;padding:12px;border-radius:10px}
+.chat-compose-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.chat-compose-actions .btn{margin-left:auto}.chat-compose-hint{font-size:11px;color:var(--muted)}
+.chat-compose .btn{min-width:68px;padding:8px 16px;white-space:nowrap;line-height:20px;font-size:13px}.chat-compose{padding-top:8px;border-top:1px solid var(--border)}
+/* 未连接/断线时覆盖聊天区的手动连接页 */
+.chat-offline{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--bg);padding:20px;text-align:center}
+.chat-offline-icon{font-size:30px;line-height:1}
+.chat-offline-title{font-size:14px;font-weight:650}
+.chat-offline-text{font-size:12px;color:var(--muted);overflow-wrap:anywhere;max-width:320px}
+.chat-offline .btn{margin-top:8px;width:auto;min-width:96px;height:38px;padding:8px 20px;font-size:14px;border-radius:10px}
+/* 统一细滚动条：Firefox 用 scrollbar-*，Webkit 隐藏原生箭头按钮并画圆角滑块 */
+.chat-log,#chatDeviceList,.panel-page{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.tool-panel ::-webkit-scrollbar{width:8px;height:8px}
+.tool-panel ::-webkit-scrollbar-track{background:transparent}
+.tool-panel ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
+.tool-panel ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+.tool-panel ::-webkit-scrollbar-button,.tool-panel ::-webkit-scrollbar-corner{display:none;width:0;height:0}
+.chat-subcard{flex-shrink:0;border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.chat-subcard:empty{display:none}
+.chat-subcard .chat-row{flex-wrap:wrap}
+.chat-card-head{display:flex;align-items:center;gap:10px}
+.chat-card-icon{width:34px;height:34px;flex:none;border-radius:10px;background:var(--accent-soft);display:grid;place-items:center;font-size:17px}
+.chat-card-title{font-size:13px;font-weight:650}
+.chat-card-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.chat-count{margin-left:auto;flex:none;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+#chatSettingsName #chatNameBlock{gap:4px}
+#chatSettingsName label[for="chatName"]{display:none}
+#chatLimit{width:78px;font-size:12px}
+.chat-note{font-size:11px;color:var(--muted);margin:0}
+.theme-options{display:flex;flex-wrap:wrap;gap:8px;min-width:0;border:0;margin:0;padding:0}
+.tool-panel .theme-option{display:flex;align-items:center;gap:8px;flex:1 1 120px;min-height:44px;border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;cursor:pointer}
+.theme-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.theme-options:disabled .theme-option{opacity:.6;cursor:wait}
+.tool-panel .theme-option input{width:18px;height:18px;flex:none;margin:0;padding:0;accent-color:var(--accent)}
+#themeStatus.bad{color:var(--bad)}
+#chatDID{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.chat-title-no{font-weight:400;color:var(--muted);font-size:11px}
+/* 头像底色选择器：8 个圆形色块，选中项带描边与勾号 */
+.chat-swatches{display:flex;flex-wrap:wrap;gap:10px}
+.chat-swatch{width:44px;height:44px;padding:0;border:4px solid var(--card);border-radius:50%;cursor:pointer;position:relative;transition:transform .1s}
+.chat-swatch:hover:not(:disabled){transform:scale(1.08)}
+.chat-swatch:disabled{opacity:.5;cursor:default}
+.chat-swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.chat-swatch[aria-pressed="true"]::after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.panel-page ul{list-style:none;margin:0;padding:0}
+#chatDeviceList{border-top:1px solid var(--border);padding-top:4px}
+.chat-device{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.chat-device:last-child{border-bottom:0}
+.chat-avatar{position:relative;width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:650;color:#fff}
+.chat-avatar::after{content:'';position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:2px solid var(--bg)}
+.chat-device-info{min-width:0;flex:1}
+.chat-device-name{font-size:13px;font-weight:600}
+.chat-badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:600;vertical-align:1px}
+.chat-device-meta,.chat-system{font-size:11px;color:var(--muted);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@keyframes chatPageIn{from{opacity:0;transform:translateY(6px)}}
+.panel-page:not([hidden]){animation:chatPageIn .18s ease}
+.chat-system{text-align:center;margin:8px 0;line-height:1.6}
+@media(max-width:1099px){.tool-panel{padding:20px;max-width:100%}.chat-msg-row .chat-message{max-width:min(78%,640px)}.panel-close{display:inline-flex}}
+@media(max-width:767px){.tool-panel{padding:12px;gap:8px}.tool-panel input,.tool-panel .chat-compose textarea{font-size:16px}.chat-identity{padding-bottom:8px}.chat-msg-row .chat-message{max-width:calc(100% - 44px)}.chat-head h2{font-size:16px}.chat-compose-hint{font-size:11px}}
+body.keyboard-open .chat-identity,body.keyboard-open .chat-compose-hint{display:none}
+body.keyboard-open .tool-panel{gap:6px;padding:8px 12px}
+body.keyboard-open .chat-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;padding-top:4px}
+body.keyboard-open .chat-compose-actions{margin-top:0}
+body.keyboard-open .tool-panel .chat-compose textarea{max-height:64px}
+@media(max-height:500px){.chat-identity,.chat-compose-hint{display:none}.tool-panel{gap:6px;padding:8px 12px}.chat-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;padding-top:4px}.tool-panel .chat-compose textarea{max-height:64px}.chat-compose-actions{margin-top:0}.chat-head h2{font-size:14px}}

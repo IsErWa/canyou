@@ -38,5 +38,5 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Canyou ${{ github.ref_name }}
-          files: Canyou-${{ github.ref_name }}.exe
+          files: dist/bin/Canyou-${{ github.ref_name }}.exe
           generate_release_notes: true

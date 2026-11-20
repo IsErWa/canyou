@@ -1,0 +1,62 @@
+{{define "workspacePanels"}}{{if .CanChat}}
+<section class="card tool-panel" id="chatPanel" hidden aria-labelledby="chatTitle" data-ip="{{.ClientIP}}">
+  <div class="chat-head"><h2 id="chatTitle">公共聊天室</h2><button class="up-close panel-close" id="chatClose" data-panel-close="chat" type="button" aria-label="关闭消息，返回文件"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="chat-toolbar"><span class="chat-status" id="chatStatus" role="status">正在连接…</span></div>
+  <div class="chat-identity" id="chatMyInfo" hidden></div>
+  <div class="panel-page chat-chat" id="chatPageChat">
+    <div class="chat-log" id="chatLog" role="log" aria-label="聊天记录" aria-live="polite"><div class="chat-empty">连接后加载已保留的公共聊天记录</div></div>
+    <form class="chat-compose" id="chatForm"><textarea id="chatText" rows="2" placeholder="分享想法，或打个招呼…" aria-label="消息内容" disabled></textarea><div class="chat-compose-actions"><span class="chat-compose-hint" id="chatInputHint">Enter 发送 · Shift+Enter 换行</span><button class="btn" id="chatSend" type="submit" disabled>发送</button></div></form>
+    <div class="chat-offline" id="chatOffline" hidden>
+      <div class="chat-offline-icon"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg></div>
+      <div class="chat-offline-title">未连接聊天室</div>
+      <div class="chat-offline-text" id="chatOfflineText">正在自动重连…</div>
+      <button class="btn" id="chatManualConnect" type="button">重新连接</button>
+    </div>
+  </div>
+</section>
+<section class="card tool-panel" id="devicesPanel" hidden aria-labelledby="devicesTitle">
+  <div class="chat-head"><h2 id="devicesTitle">在线设备</h2><button class="up-close panel-close" id="devicesClose" data-panel-close="devices" type="button" aria-label="关闭在线设备，返回文件"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="chat-toolbar"><span class="chat-status" id="devicesStatus" role="status">正在连接设备服务…</span></div>
+  <div class="panel-page" id="chatPageDevices">
+    <div class="chat-subcard">
+      <div class="chat-card-head"><span class="chat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span><div><div class="chat-card-title">在线设备</div></div><span class="chat-count" id="chatDevicesCount">0</span></div>
+      <ul id="chatDeviceList" aria-label="在线设备列表"></ul>
+      <p class="chat-note" id="chatDevicesNote">连接建立后显示实时在线设备</p>
+    </div>
+  </div>
+</section>
+<section class="card tool-panel" id="settingsPanel" hidden aria-labelledby="settingsTitle">
+  <div class="chat-head"><h2 id="settingsTitle">设置</h2><button class="up-close panel-close" id="settingsClose" data-panel-close="settings" type="button" aria-label="关闭设置，返回文件"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="chat-toolbar"><span class="chat-status" id="settingsStatus" role="status">正在连接，外观设置可独立使用</span></div>
+  <div class="panel-page" id="chatPageSettings">
+    <div class="chat-subcard">
+      <div class="chat-card-title" id="themeTitle">外观</div>
+      <fieldset class="theme-options" id="themeOptions" aria-labelledby="themeTitle" disabled>
+        <label class="theme-option"><input type="radio" name="theme" id="themeDark" value="dark">深色模式</label>
+        <label class="theme-option"><input type="radio" name="theme" id="themeLight" value="light">浅色模式</label>
+        <label class="theme-option"><input type="radio" name="theme" id="themeSystem" value="system" checked>跟随系统</label>
+      </fieldset>
+      <p class="chat-note" id="themeStatus" role="status">正在读取主题…</p>
+    </div>
+    <div class="chat-subcard">
+      <div class="chat-card-head"><span class="chat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span><div><div class="chat-card-title">名称<span class="chat-title-no"> · 设备编号：<span id="chatMyNo">—</span></span></div></div></div>
+      <div id="chatSettingsName">
+        <div id="chatNameBlock">
+          <div class="chat-row"><label for="chatName">名称</label><input class="chat-name" id="chatName" autocomplete="off" placeholder="名称"><button class="tbtn" id="chatRename" type="button">保存名称</button></div>
+          <div class="chat-note">设备标识：<span id="chatDID"></span> · 当前 IP：<span id="chatIP">{{.ClientIP}}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-subcard">
+      <div class="chat-card-head"><span class="chat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></span><div><div class="chat-card-title">头像颜色</div></div></div>
+      <div class="chat-swatches" id="chatSwatches" role="group" aria-label="头像颜色"></div>
+      <div class="chat-row"><p class="chat-note">选中色块后点击保存，其他设备同步更新</p><button class="tbtn" id="chatSaveColor" type="button" disabled>保存颜色</button></div>
+    </div>
+    <div class="chat-subcard">
+      <div class="chat-card-head"><span class="chat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg></span><div><div class="chat-card-title">聊天记录</div><div class="chat-card-sub">所有已连接设备可修改全局保留上限</div></div></div>
+      <div class="chat-row"><label for="chatLimit">保留条数</label><input id="chatLimit" type="number" min="1" max="10000" step="1" value="200" disabled><button class="tbtn" id="chatSaveLimit" type="button" disabled>保存</button></div>
+      <p class="chat-note">超出上限会删除最旧记录，且无法恢复；记录保存在主程序电脑上。</p>
+    </div>
+  </div>
+</section>
+{{end}}{{end}}

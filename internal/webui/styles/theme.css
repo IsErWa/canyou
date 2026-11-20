@@ -1,0 +1,16 @@
+
+:root{
+  color-scheme:light;--bg:#f4f6fa;--card:#fff;--text:#202b3d;--muted:#657389;
+  --border:#e2e7ef;--accent:#4263eb;--accent-ink:#fff;--accent-soft:#edf1ff;
+  --ok:#15804b;--bad:#ce3546;--shadow:0 2px 6px rgba(24,39,75,.03);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){
+color-scheme:dark;--bg:#10141d;--card:#191f2c;--text:#e7ecf5;--muted:#a0adc2;
+--border:#2b3548;--accent:#91a7ff;--accent-ink:#121a32;--accent-soft:#263251;
+--ok:#6ed9a0;--bad:#ff8b96;--shadow:none;
+ }}
+:root[data-theme="dark"]{
+color-scheme:dark;--bg:#10141d;--card:#191f2c;--text:#e7ecf5;--muted:#a0adc2;
+--border:#2b3548;--accent:#91a7ff;--accent-ink:#121a32;--accent-soft:#263251;
+--ok:#6ed9a0;--bad:#ff8b96;--shadow:none;
+ }

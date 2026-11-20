@@ -2,6 +2,7 @@
 Canyou.exe
 *.exe
 resource.syso
+/cmd/canyou/resource.syso
 
 # 运行时生成的二维码临时图片等
 canyou_qrcode.png
@@ -10,8 +11,10 @@ canyou_qrcode.png
 README.html
 README.en.html
 
-# Go 构建缓存
+# 构建产物、截图、隔离浏览器 profile 与导出文档
 /dist/
+
+# Go 构建缓存
 /bin/
 
 # 编辑器 / IDE
