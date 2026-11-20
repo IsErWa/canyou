@@ -33,7 +33,7 @@ func newListingTestHandler(t *testing.T) (http.Handler, string) {
 			t.Fatal(err)
 		}
 	}
-	return NewHandler(root, t.TempDir(), func() bool { return false }, "dev"), root
+	return NewHandler(root, t.TempDir(), func() bool { return false }, "dev", nil), root
 }
 
 func postList(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {

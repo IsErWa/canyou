@@ -28,7 +28,7 @@ func TestFileRoutesRemainAvailableWithChat(t *testing.T) {
 	if err := manager.Enable(); err != nil {
 		t.Fatal(err)
 	}
-	handler := server.NewHandler(root, uploads, manager, "dev")
+	handler := server.NewHandler(root, uploads, manager, "dev", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/sample.txt", nil))
 	if response.Code != 200 || response.Body.String() != "共享文件" {

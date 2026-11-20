@@ -131,6 +131,11 @@ func (controller *controller) buildQRArea() {
 	controller.openButton.SetEnabled(false)
 	controller.openButton.OnClick().Bind(controller.onOpenAddress)
 
+	controller.bandwidthButton = winc.NewPushButton(controller.mainWindow)
+	controller.bandwidthButton.SetText(buttonBandwidth)
+	setBounds(controller.bandwidthButton, 280, 303, 76, 25)
+	controller.bandwidthButton.OnClick().Bind(controller.onBandwidthSettings)
+
 	controller.qrImageView = winc.NewImageView(controller.mainWindow)
 	setBounds(controller.qrImageView, 25, 200, qrImagePixelSize, qrImagePixelSize)
 	controller.qrImageView.Hide()

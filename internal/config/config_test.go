@@ -37,7 +37,7 @@ func TestExistingConfigurationRoundTrip(t *testing.T) {
 	if err := os.WriteFile(filename, []byte(legacy), 0600); err != nil {
 		t.Fatal(err)
 	}
-	want := AppConfig{Directory: `C:\共享目录`, UploadDirectory: `C:\接收文件`, Port: "9090", SelectedIP: "192.168.1.2", PasswordHash: "legacy-hash", Password: "旧密码"}
+	want := AppConfig{Directory: `C:\共享目录`, UploadDirectory: `C:\接收文件`, Port: "9090", SelectedIP: "192.168.1.2", PasswordHash: "legacy-hash", Password: "旧密码", Bandwidth: DefaultBandwidthLimits()}
 	if got := LoadAppConfig(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("旧配置读取失败：%+v", got)
 	}

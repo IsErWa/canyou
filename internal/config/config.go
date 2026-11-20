@@ -10,12 +10,13 @@ import (
 
 // AppConfig 跨启动保留的用户配置：查看目录、上传目录、端口与上次选中的网卡 IP
 type AppConfig struct {
-	Directory       string `json:"directory"`
-	UploadDirectory string `json:"upload_directory"`
-	Port            string `json:"port"`
-	SelectedIP      string `json:"selected_ip"`
-	PasswordHash    string `json:"password_hash"` // 访问密码的 SHA-256 hex；空表示未设密码
-	Password        string `json:"password"`      // 访问密码明文，仅供界面回显与复制；门禁校验仍走 PasswordHash
+	Bandwidth       BandwidthLimits `json:"bandwidth"`
+	Directory       string          `json:"directory"`
+	UploadDirectory string          `json:"upload_directory"`
+	Port            string          `json:"port"`
+	SelectedIP      string          `json:"selected_ip"`
+	PasswordHash    string          `json:"password_hash"` // 访问密码的 SHA-256 hex；空表示未设密码
+	Password        string          `json:"password"`      // 访问密码明文，仅供界面回显与复制；门禁校验仍走 PasswordHash
 }
 
 // appConfigFile 返回 %AppData%/Canyou 目录下指定文件的完整路径，目录不存在时创建
@@ -38,7 +39,7 @@ func configFilePath() (string, error) {
 
 // LoadAppConfig 读取配置；文件缺失或损坏时回退到默认端口
 func LoadAppConfig() AppConfig {
-	config := AppConfig{Port: DefaultPort}
+	config := AppConfig{Port: DefaultPort, Bandwidth: DefaultBandwidthLimits()}
 
 	path, err := configFilePath()
 	if err != nil {
@@ -58,6 +59,9 @@ func LoadAppConfig() AppConfig {
 
 // Save 将配置写回磁盘
 func (config AppConfig) Save() error {
+	if err := config.Bandwidth.Validate(); err != nil {
+		return err
+	}
 	path, err := configFilePath()
 	if err != nil {
 		return err

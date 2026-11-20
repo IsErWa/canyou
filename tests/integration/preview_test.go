@@ -3,6 +3,8 @@ package integration
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -20,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"Canyou/internal/bandwidth"
 	"Canyou/internal/chat"
 	"Canyou/internal/config"
 	"Canyou/internal/gate"
@@ -32,8 +35,28 @@ func TestGateBrowserPreview(t *testing.T) {
 	if os.Getenv("CANYOU_GATE_PREVIEW") != "1" {
 		t.Skip("仅用于手动浏览器验收")
 	}
+	t.Setenv("APPDATA", t.TempDir())
 	t.Setenv("LOCALAPPDATA", t.TempDir())
 	root, uploads := t.TempDir(), t.TempDir()
+	limits := bandwidth.New()
+	bandwidthPreview := os.Getenv("CANYOU_BANDWIDTH_PREVIEW") == "1"
+	if bandwidthPreview {
+		if err := limits.Update(config.BandwidthLimits{
+			PerIPUpload: 256 * 1024, PerIPDownload: 256 * 1024,
+			TotalUpload: 512 * 1024, TotalDownload: 512 * 1024,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		data := make([]byte, 1024*1024)
+		if _, err := rand.Read(data); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(root, "bandwidth-sample.bin")
+		if err := os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("限速验收：每 IP 上下行各 256 KiB/s，总上下行各 512 KiB/s；样本 %s；SHA256 %x；上传目录 %s", path, sha256.Sum256(data), uploads)
+	}
 	if err := os.WriteFile(filepath.Join(root, "示例文件.txt"), []byte("门禁验收样例"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -104,8 +127,9 @@ func TestGateBrowserPreview(t *testing.T) {
 	version := os.Getenv("CANYOU_PREVIEW_VERSION")
 	gate := gate.New(version)
 	gate.SetPasswordHash(config.HashAccessPassword("1234"))
-	share := gate.Wrap(server.NewHandler(root, uploads, manager, version))
+	share := gate.Wrap(server.NewHandler(root, uploads, manager, version, limits))
 	done := make(chan struct{})
+	var stopOnce sync.Once
 	mux := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/" && request.URL.Query().Get("__test_files_only") == "1" && request.Method == http.MethodGet {
 			writer.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -121,19 +145,23 @@ func TestGateBrowserPreview(t *testing.T) {
 			return
 		}
 		if request.URL.Path == "/__test/stop" && request.Method == http.MethodPost {
-			close(done)
+			stopOnce.Do(func() { close(done) })
 			return
 		}
 		share.ServeHTTP(writer, request)
 	})
-	listener, err := net.Listen("tcp", "127.0.0.1:18082")
+	address := "127.0.0.1:18082"
+	if bandwidthPreview {
+		address = "127.0.0.1:0"
+	}
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		t.Fatal(err)
 	}
 	server := &http.Server{Handler: mux}
 	defer server.Close()
 	go server.Serve(listener)
-	t.Log("门禁验收地址：http://127.0.0.1:18082（密码 1234，仅回环地址）")
+	t.Logf("门禁验收地址：http://%s（密码 1234，仅回环地址）", listener.Addr())
 	select {
 	case <-done:
 	case <-time.After(20 * time.Minute):
@@ -211,7 +239,7 @@ func TestChatBrowserPreview(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer manager.Disable()
-	share := server.NewHandler(root, uploads, manager, os.Getenv("CANYOU_PREVIEW_VERSION"))
+	share := server.NewHandler(root, uploads, manager, os.Getenv("CANYOU_PREVIEW_VERSION"), nil)
 	done := make(chan struct{})
 	var once sync.Once
 	mux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

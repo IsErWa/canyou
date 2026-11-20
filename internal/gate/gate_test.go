@@ -29,7 +29,7 @@ func newGateTestServer(t *testing.T) (*Gate, *httptest.Server) {
 		t.Fatal(err)
 	}
 	gate := New("dev")
-	server := httptest.NewServer(gate.Wrap(share.NewHandler(root, uploads, func() bool { return true }, "dev")))
+	server := httptest.NewServer(gate.Wrap(share.NewHandler(root, uploads, func() bool { return true }, "dev", nil)))
 	t.Cleanup(server.Close)
 	return gate, server
 }

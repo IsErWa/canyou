@@ -139,7 +139,7 @@ func newGateTestServer(t *testing.T) (*gate.Gate, *httptest.Server) {
 	}
 	t.Cleanup(manager.Disable)
 	gate := gate.New("dev")
-	server := httptest.NewServer(gate.Wrap(server.NewHandler(root, uploads, manager, "dev")))
+	server := httptest.NewServer(gate.Wrap(server.NewHandler(root, uploads, manager, "dev", nil)))
 	t.Cleanup(server.Close)
 	return gate, server
 }
@@ -209,7 +209,7 @@ func TestGateRenameSyncsAllowedDevices(t *testing.T) {
 	defer manager.Disable()
 	gate := gate.New("dev")
 	gate.SetPasswordHash(config.HashAccessPassword("1234"))
-	server := httptest.NewServer(gate.Wrap(server.NewHandler(t.TempDir(), t.TempDir(), manager, "dev")))
+	server := httptest.NewServer(gate.Wrap(server.NewHandler(t.TempDir(), t.TempDir(), manager, "dev", nil)))
 	defer server.Close()
 
 	if code, _ := postGateJSON(t, server, "/gate/unlock", map[string]string{"did": gateTestDid, "password": "1234", "name": "手机"}); code != 200 {

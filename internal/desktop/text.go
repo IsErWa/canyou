@@ -26,14 +26,17 @@ const (
 	hintPassOn        = "已启用"
 
 	// 按钮文字
-	buttonChooseDir = "选择目录"
-	buttonRefreshIP = "刷新"
-	buttonStart     = "启动服务"
-	buttonStop      = "停止服务"
-	buttonCopyURL   = "复制地址"
-	buttonCopyPass  = "复制"
-	buttonOpen      = "浏览器打开"
-	buttonApplyPass = "设置密码"
+	buttonChooseDir       = "选择目录"
+	buttonRefreshIP       = "刷新"
+	buttonStart           = "启动服务"
+	buttonStop            = "停止服务"
+	buttonCopyURL         = "复制地址"
+	buttonCopyPass        = "复制"
+	buttonOpen            = "浏览器打开"
+	buttonApplyPass       = "设置密码"
+	buttonBandwidth       = "传输限速"
+	buttonSaveBandwidth   = "保存并应用"
+	buttonCancelBandwidth = "取消"
 
 	// 状态与访问地址展示
 	statusIdle        = "● 未运行"
@@ -52,6 +55,16 @@ const (
 	msgNeedDir            = "请先选择查看目录"
 	msgNeedPassCopy       = "请先在密码框输入要复制的密码"
 	msgCopiedTitle        = "已复制"
+
+	// 传输限速窗口
+	labelBandwidthPerIP    = "单客户端"
+	labelBandwidthTotal    = "所有客户端"
+	labelBandwidthUpload   = "上传（MB/s）"
+	labelBandwidthDownload = "下载（MB/s）"
+	textBandwidthHint      = "0 表示不限速；支持小数，最大 10000 MB/s。"
+	textBandwidthDirection = "上传：客户端 → 本机；下载：本机 → 客户端。"
+	textBandwidthShared    = "同一 IP 的多个连接共享额度，并同时受总量限制。"
+	errSaveBandwidth       = "保存限速失败：%w"
 
 	// 错误提示模板（%s / %q 为运行时填充的错误详情）
 	errInvalidPort = "端口 %q 非法：仅允许 1-65535 的数字"

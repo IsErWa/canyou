@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"Canyou/internal/bandwidth"
 )
 
 const (
@@ -28,7 +30,7 @@ type uploadResult struct {
 }
 
 // handleFileUpload 接收 multipart 上传，将文件保存到 uploadDir，并以 JSON 返回结果供前端就地展示
-func handleFileUpload(writer http.ResponseWriter, request *http.Request, uploadDir string) {
+func handleFileUpload(writer http.ResponseWriter, request *http.Request, uploadDir string, limits *bandwidth.Manager) {
 	if request.Method != http.MethodPost {
 		writeUploadJSON(writer, http.StatusMethodNotAllowed, uploadResult{Message: "上传仅支持 POST"})
 		return
@@ -37,12 +39,18 @@ func handleFileUpload(writer http.ResponseWriter, request *http.Request, uploadD
 		writeUploadJSON(writer, http.StatusBadRequest, uploadResult{Message: "服务端未配置上传目录"})
 		return
 	}
+	if request.ContentLength > maxUploadBytes {
+		writeUploadJSON(writer, http.StatusRequestEntityTooLarge, uploadResult{Message: "上传解析失败或文件过大"})
+		return
+	}
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		writeUploadJSON(writer, http.StatusInternalServerError, uploadResult{Message: "上传目录不可用"})
 		return
 	}
 
-	request.Body = http.MaxBytesReader(writer, request.Body, maxUploadBytes)
+	transfer := limits.Open(request.Context(), request.RemoteAddr, bandwidth.Upload)
+	defer transfer.Close()
+	request.Body = transfer.Reader(http.MaxBytesReader(writer, request.Body, maxUploadBytes))
 	if err := request.ParseMultipartForm(uploadMemoryBuffer); err != nil {
 		writeUploadJSON(writer, http.StatusRequestEntityTooLarge, uploadResult{Message: "上传解析失败或文件过大"})
 		return

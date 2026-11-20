@@ -10,13 +10,15 @@
 
 ## 📸 Screenshots by Scenario
 
-These screenshots show the actual `v2.0.0` application with isolated demo folders, passwords, devices, and messages. Desktop pages use a 1440 × 900 viewport; mobile screenshots use a browser-emulated 390 × 844 viewport, not a physical-phone test. The application UI is currently in Chinese.
+The desktop-app and bandwidth-settings screenshots show the current `dev` build; web screenshots retain the actual `v2.0.0` interface. All folders, passwords, devices, and messages are isolated demo data. Desktop pages use a 1440 × 900 viewport; mobile screenshots use a browser-emulated 390 × 844 viewport, not a physical-phone test. The application UI is currently in Chinese.
 
 ### Desktop App: Configuration and Service Controls
 
 | Configured, not running | Sharing service running |
 | --- | --- |
 | ![Stopped desktop app with folders, adapter, port, and access password](./docs/images/server-stopped.png) | ![Running desktop app with QR code, access URL, and Stop service button](./docs/images/server.png) |
+
+![Desktop bandwidth settings: single-client and aggregate upload and download limits](./docs/images/bandwidth-settings.png)
 
 ### Desktop Browser: Files Alongside Chat
 
@@ -112,7 +114,8 @@ Settings, chat, and online devices are peer panels. Appearance offers dark, ligh
 - 🔐 **Optional access gate**: with a password configured, new devices are registered after verification; without one, the page registers them automatically without a password prompt. Authorized devices can pass automatically later. Password changes take effect without restarting, but do not revoke existing authorizations
 - 🔗 **One-click actions**: copy the access URL, open in default browser (only enabled while the service is running and the address is valid)
 - ▶️ **Service and network controls**: one button switches between “启动服务” (Start service) and “停止服务” (Stop service); refreshing or selecting an IP only updates the URL and QR code, without restarting sharing
-- 💾 **Local persistence**: folders, port, IP, and access-password settings are saved; SQLite stores chat history, authorized devices, names, avatar colors, and themes
+- **Bandwidth limits**: separate single-client and aggregate upload/download limits, all defaulting to 10 MB/s; single-client limits still group connections by IP, settings apply immediately, and 0 means unlimited
+- 💾 **Local persistence**: folders, port, IP, access-password, and bandwidth settings are saved; SQLite stores chat history, authorized devices, names, avatar colors, and themes
 - 🛡️ **Robust port handling**: the port field accepts digits only and is limited to 1–65535; clear messages when a port is in use or reserved by the system
 - 🪟 **No console window**: built as a GUI-subsystem executable — launches cleanly with no command-line flash
 
@@ -142,8 +145,28 @@ Settings, chat, and online devices are peer panels. Appearance offers dark, ligh
 | Change appearance | Choose dark, light, or system in Settings; the selection saves automatically |
 | Chat retention | Default: 200 messages; range: 1–10000. This is global and editable by all connected devices; reducing it deletes the oldest messages |
 | Connection loss | The page retries automatically up to five times; use “重新连接” (Reconnect) if it is still disconnected |
+| Bandwidth limits | Click “传输限速” in the desktop app, set single-client / aggregate upload and download limits, then “保存并应用” (Save and apply); also available while stopped |
 
 > Changing folders or a valid port while running restarts the service and briefly interrupts connections. An empty / invalid port stops it. Refreshing or selecting an IP does not restart it. Reloading the page does not restore files that have not yet been uploaded.
+
+### Upload and Download Limits
+
+The desktop app provides four uniform limits through “传输限速” (Bandwidth limits). “单客户端” (Single client) still groups connections by source IP, not by individual connection or device. Web clients cannot modify these limits, and there are no individual-IP overrides. Upload means **client → this computer**; download means **this computer → client**.
+
+| Setting | Scope | Field under `bandwidth` (bytes/second) |
+| --- | --- | --- |
+| Single client · Upload | Combined uploads from the same IP | `per_ip_upload_bytes_per_second` |
+| Single client · Download | Combined files, ZIPs, and media previews from the same IP | `per_ip_download_bytes_per_second` |
+| All clients · Upload | Combined uploads across all IPs | `total_upload_bytes_per_second` |
+| All clients · Download | Combined downloads across all IPs | `total_download_bytes_per_second` |
+
+- The UI uses **MB/s**, with `1 MB = 1,000,000 bytes`; range: 0–10000, up to six decimal places. All four values default to `10 MB/s` for new configurations and missing settings; existing saved values, including `0`, are preserved. Setting a value to `0` means unlimited for that layer and direction. Invalid bandwidth values or types reset all four limits to unlimited and produce a log message without affecting other settings.
+- Single-client and aggregate limits both apply. By default, all clients share an aggregate upload limit of 10 MB/s and an independent aggregate download limit of 10 MB/s; each client cannot simultaneously claim a dedicated 10 MB/s. For example, single-client download 5 and aggregate download 20 give each IP's connections a shared 5 MB/s budget, subject to the overall limit. Setting one layer to 0 does not disable the other. Upload/download budgets are independent; equal bandwidth allocation between IPs is not guaranteed.
+- “保存并应用” saves `%APPDATA%\Canyou\config.json` before updating existing transfers, without reconnecting or restarting the service. Save failures retain the active limits; cancelling or closing the dialog does not save.
+- Uploads are throttled while reading the multipart request body, including form overhead. ZIPs are charged by compressed output bytes. Files and media retain Range support, and the per-request upload size limit remains 2 GB.
+- Chat, the access gate, directory pages, and directory queries do not wait for bandwidth tokens. Low download limits may cause video buffering. Exempting chat does not guarantee zero latency on a saturated physical network.
+- Grouping uses the connection's actual source IP, not client-supplied IPs, `did`, or forwarding headers. Clients appearing behind the same NAT / reverse-proxy source IP share that IP's budget.
+- This controls application-level average transfer rates, allowing small token-bucket and network-buffer bursts. It does not limit access to other websites and is not network-adapter or router QoS.
 
 ### Device Authorization Flow
 
@@ -256,6 +279,7 @@ By default, the script exports both READMEs, images, and the license file to `di
 │   ├── desktop/    # Native window, controls, clipboard and QR code
 │   ├── server/     # HTTP lifecycle, routing and gate composition
 │   ├── share/      # Listings, files, uploads and ZIP
+│   ├── bandwidth/  # Per-IP / aggregate limits, request and response stream wrappers
 │   ├── chat/       # WebSocket, rooms and connection lifecycle
 │   ├── gate/       # Password, device authorization and gate API
 │   ├── device/     # Shared identity, name, avatar and theme rules

@@ -33,6 +33,7 @@ type controller struct {
 	shareButton     *winc.PushButton
 	copyButton      *winc.PushButton
 	openButton      *winc.PushButton
+	bandwidthButton *winc.PushButton
 	gatePassEdit    *winc.Edit
 	gateHint        *winc.Label
 	statusLabel     *statusLabelView
@@ -117,6 +118,9 @@ func (controller *controller) applyLoadedConfig() {
 		controller.uploadDir = controller.config.UploadDirectory
 		controller.uploadEdit.SetText(controller.config.UploadDirectory)
 	}
+	if err := controller.fileServer.SetBandwidthLimits(controller.config.Bandwidth); err != nil {
+		log.Println("恢复限速设置失败:", err)
+	}
 	// 使用已保存的哈希恢复门禁生效状态
 	controller.fileServer.SetAccessPasswordHash(controller.config.PasswordHash)
 	controller.updateGateHint()
@@ -126,17 +130,19 @@ func (controller *controller) applyLoadedConfig() {
 
 // saveConfig 采集当前界面状态并持久化（尽力而为，失败仅记录）
 func (controller *controller) saveConfig() {
-	config := config.AppConfig{
-		Directory:       controller.selectedDir,
-		UploadDirectory: controller.uploadDir,
-		Port:            controller.portEdit.Text(),
-		SelectedIP:      controller.currentIP(),
-		PasswordHash:    controller.config.PasswordHash,
-		Password:        controller.config.Password,
-	}
-	if err := config.Save(); err != nil {
+	if err := controller.collectConfig().Save(); err != nil {
 		log.Println("保存配置失败:", err)
 	}
+}
+
+// collectConfig 从完整配置复制，再采集界面字段，避免其他操作丢失限速设置。
+func (controller *controller) collectConfig() config.AppConfig {
+	cfg := controller.config
+	cfg.Directory = controller.selectedDir
+	cfg.UploadDirectory = controller.uploadDir
+	cfg.Port = controller.portEdit.Text()
+	cfg.SelectedIP = controller.currentIP()
+	return cfg
 }
 
 // refreshQRCode 依据当前 IP 与端口重绘二维码；条件不满足时显示占位提示

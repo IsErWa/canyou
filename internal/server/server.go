@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,7 +10,9 @@ import (
 	"sync"
 	"syscall"
 
+	"Canyou/internal/bandwidth"
 	"Canyou/internal/chat"
+	"Canyou/internal/config"
 	"Canyou/internal/gate"
 )
 
@@ -25,11 +28,13 @@ type FileServer struct {
 	chat     *chat.Manager
 	gate     *gate.Gate
 	version  string
+	limits   *bandwidth.Manager
+	cancel   context.CancelFunc
 }
 
 // NewFileServer 创建一个处于空闲状态的共享服务实例
 func NewFileServer(version string) *FileServer {
-	return &FileServer{gate: gate.New(version), version: version}
+	return &FileServer{gate: gate.New(version), version: version, limits: bandwidth.New()}
 }
 
 // Windows Winsock 监听失败的常见错误码。
@@ -76,7 +81,12 @@ func (server *FileServer) Start(viewDir, uploadDir string, port int) error {
 	if err := server.chat.Enable(); err != nil {
 		log.Println("打开消息失败:", err)
 	}
-	httpSrv := &http.Server{Handler: server.gate.Wrap(NewHandler(viewDir, uploadDir, server.chat, server.version))}
+	ctx, cancel := context.WithCancel(context.Background())
+	server.cancel = cancel
+	httpSrv := &http.Server{
+		Handler:     server.gate.Wrap(NewHandler(viewDir, uploadDir, server.chat, server.version, server.limits)),
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
 	server.httpSrv = httpSrv
 	server.listener = listener
 	server.running = true
@@ -98,6 +108,7 @@ func (server *FileServer) Stop() {
 	if server.httpSrv == nil {
 		return
 	}
+	server.cancel()
 	server.chat.Disable()
 	server.httpSrv.Close()
 	server.httpSrv = nil
@@ -116,6 +127,11 @@ func (server *FileServer) ChatEnabled() bool {
 // 已授权设备名单保持不变
 func (server *FileServer) SetAccessPasswordHash(hash string) {
 	server.gate.SetPasswordHash(hash)
+}
+
+// SetBandwidthLimits 热更新所有文件传输的共享配额，不重启服务或聊天室。
+func (server *FileServer) SetBandwidthLimits(limits config.BandwidthLimits) error {
+	return server.limits.Update(limits)
 }
 
 // IsRunning 返回服务当前是否处于运行状态

@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"Canyou/internal/bandwidth"
 	"Canyou/internal/device"
 	"Canyou/internal/webui"
 )
@@ -29,20 +30,27 @@ func serveIndexPage(writer http.ResponseWriter, request *http.Request, uploadDir
 }
 
 // NewHandler 处理目录、文件、上传及 ZIP；聊天可用性由组装方查询。
-func NewHandler(viewDir, uploadDir string, canChat func() bool, version string) http.Handler {
+func NewHandler(viewDir, uploadDir string, canChat func() bool, version string, limits *bandwidth.Manager) http.Handler {
+	if limits == nil {
+		limits = bandwidth.New()
+	}
 	fileServer := http.FileServer(http.Dir(viewDir))
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch {
 		case request.URL.Path == "/upload":
-			handleFileUpload(writer, request, uploadDir)
+			handleFileUpload(writer, request, uploadDir, limits)
 		case request.URL.Path == "/zip":
-			handleZipDownload(writer, request, viewDir)
+			transfer := limits.Open(request.Context(), request.RemoteAddr, bandwidth.Download)
+			defer transfer.Close()
+			handleZipDownload(transfer.Writer(writer, request.Method), request, viewDir)
 		case request.URL.Path == "/api/list":
 			serveListAPI(writer, request, viewDir)
 		case isDirectoryPath(viewDir, request.URL.Path):
 			serveIndexPage(writer, request, uploadDir, canChat != nil && canChat(), version)
 		default:
-			fileServer.ServeHTTP(writer, request)
+			transfer := limits.Open(request.Context(), request.RemoteAddr, bandwidth.Download)
+			defer transfer.Close()
+			fileServer.ServeHTTP(transfer.Writer(writer, request.Method), request)
 		}
 	})
 }
